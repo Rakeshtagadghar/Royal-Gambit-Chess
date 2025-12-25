@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
 import { Square } from 'chess.js';
+import type { PieceSymbol } from 'chess.js';
 import { Navbar } from '@/components/layout/Navbar';
 import { ChessBoard, MoveList, PlayerCard, GameActions, MoveControls } from '@/components/chess';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { BOT_DIFFICULTIES, BotDifficulty, TIME_CONTROLS, TimeControl } from '@/types/chess';
 import { cn } from '@/lib/utils';
 import { Bot, Play, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 
 type GamePhase = 'setup' | 'playing';
 
 export default function BotPage() {
-  const router = useRouter();
   const { profile } = useAuth();
   const [phase, setPhase] = useState<GamePhase>('setup');
   const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>(BOT_DIFFICULTIES[1]);
@@ -30,6 +30,7 @@ export default function BotPage() {
     boardState,
     status,
     playerColor,
+    gameId,
     initGame,
     makeMove,
     setResult,
@@ -37,12 +38,40 @@ export default function BotPage() {
     getCurrentFen,
   } = useGameStore();
 
+  const submitMove = useCallback(
+    async (from: string, to: string, promotion: string | undefined, clientPly: number) => {
+      if (!gameId) return;
+      try {
+        const resp = await fetch('/api/games/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameId,
+            uci: `${from}${to}${promotion || ''}`,
+            clientPly,
+          }),
+        });
+        if (!resp.ok) {
+          const j = await resp.json().catch(() => ({}));
+          throw new Error(j?.error || 'Failed to sync move');
+        }
+      } catch (e) {
+        console.warn('Bot game move sync failed:', e);
+      }
+    },
+    [gameId]
+  );
+
   // Handle bot move
   const handleBotMove = useCallback(
     (from: Square, to: Square, promotion?: string) => {
-      makeMove(from, to, promotion as any);
+      const clientPly = useGameStore.getState().boardState.moveHistory.length;
+      const ok = makeMove(from, to, promotion as PieceSymbol | undefined);
+      if (ok) {
+        submitMove(from, to, promotion, clientPly);
+      }
     },
-    [makeMove]
+    [makeMove, submitMove]
   );
 
   const { isThinking, think } = useStockfish({
@@ -65,23 +94,49 @@ export default function BotPage() {
     }
   }, [phase, status, playerColor, boardState.turn, isThinking, think, getCurrentFen]);
 
-  const startGame = () => {
+  const startGame = async () => {
     const color = selectedColor === 'random' 
       ? (Math.random() > 0.5 ? 'white' : 'black')
       : selectedColor;
-    
-    initGame({
-      mode: 'bot',
-      playerColor: color === 'white' ? 'w' : 'b',
-      timeControl: selectedTimeControl,
-      botDifficulty: selectedDifficulty,
-    });
-    setPhase('playing');
+
+    try {
+      const resp = await fetch('/api/games/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'bot',
+          colorPreference: color,
+          timeControl: selectedTimeControl,
+        }),
+      });
+      const j = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(j?.error || 'Failed to create bot game');
+
+      initGame({
+        mode: 'bot',
+        playerColor: color === 'white' ? 'w' : 'b',
+        timeControl: selectedTimeControl,
+        botDifficulty: selectedDifficulty,
+        gameId: j.gameId,
+      });
+      setPhase('playing');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to start game';
+      toast.error(msg);
+    }
   };
 
-  const handleResign = () => {
+  const handleResign = async () => {
     const result = playerColor === 'w' ? '0-1' : '1-0';
     setResult(result, 'resign');
+
+    if (gameId) {
+      try {
+        await fetch(`/api/games/${gameId}/resign`, { method: 'POST' });
+      } catch {
+        // ignore
+      }
+    }
   };
 
   const handleRematch = () => {
@@ -142,16 +197,18 @@ export default function BotPage() {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-2">
-                  {[
-                    { value: 'white', label: 'White', emoji: '♔' },
-                    { value: 'black', label: 'Black', emoji: '♚' },
-                    { value: 'random', label: 'Random', emoji: '🎲' },
-                  ].map((option) => (
+                  {(
+                    [
+                      { value: 'white', label: 'White', emoji: '♔' },
+                      { value: 'black', label: 'Black', emoji: '♚' },
+                      { value: 'random', label: 'Random', emoji: '🎲' },
+                    ] as const
+                  ).map((option) => (
                     <Button
                       key={option.value}
                       variant={selectedColor === option.value ? 'default' : 'outline'}
                       className="flex-1"
-                      onClick={() => setSelectedColor(option.value as any)}
+                      onClick={() => setSelectedColor(option.value)}
                     >
                       <span className="mr-2 text-xl">{option.emoji}</span>
                       {option.label}
@@ -204,8 +261,8 @@ export default function BotPage() {
   }
 
   // Playing phase
-  const botColor = playerColor === 'w' ? 'black' : 'white';
-  const humanColor = playerColor === 'w' ? 'white' : 'black';
+  const botColor: 'white' | 'black' = playerColor === 'w' ? 'black' : 'white';
+  const humanColor: 'white' | 'black' = playerColor === 'w' ? 'white' : 'black';
 
   return (
     <div className="min-h-screen bg-background">
@@ -259,7 +316,11 @@ export default function BotPage() {
               </div>
 
               {/* Chess board */}
-              <ChessBoard />
+              <ChessBoard
+                onMove={(from, to, promotion, clientPly) => {
+                  submitMove(from, to, promotion, clientPly);
+                }}
+              />
 
               {/* Bottom player (you) */}
               <div className="w-full max-w-[560px] mt-2">

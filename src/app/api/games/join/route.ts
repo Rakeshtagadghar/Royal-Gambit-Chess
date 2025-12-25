@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { ensureProfileExists } from '@/lib/supabase/ensureProfile';
 
 interface JoinGameBody {
   gameId: string;
@@ -14,6 +15,9 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Ensure `profiles` row exists before `join_game` writes white_id/black_id (FK -> profiles).
+    await ensureProfileExists(supabase, user);
 
     const body: JoinGameBody = await request.json();
     const { gameId } = body;

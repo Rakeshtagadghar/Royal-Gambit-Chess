@@ -13,7 +13,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data: game, error } = await supabase
       .from('games')
-      .select('*')
+      .select(
+        `*,
+         white:profiles!games_white_id_fkey(id, username, display_name, avatar_url),
+         black:profiles!games_black_id_fkey(id, username, display_name, avatar_url),
+         creator:profiles!games_created_by_fkey(id, username, display_name, avatar_url)`
+      )
       .eq('id', gameId)
       .single();
 

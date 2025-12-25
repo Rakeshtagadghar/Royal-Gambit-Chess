@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock } from './Clock';
 import { CapturedPieces } from './CapturedPieces';
 import { useGameStore } from '@/stores/gameStore';
-import { Wifi, WifiOff, Bot } from 'lucide-react';
+import { Wifi, WifiOff, Bot, AlertTriangle } from 'lucide-react';
 
 interface PlayerCardProps {
   color: 'white' | 'black';
@@ -32,12 +32,14 @@ export function PlayerCard({
 }: PlayerCardProps) {
   const { boardState, status } = useGameStore();
   const isActive = status === 'active' && boardState.turn === (color === 'white' ? 'w' : 'b');
+  const isInCheck = status === 'active' && boardState.isCheck && boardState.turn === (color === 'white' ? 'w' : 'b');
 
   return (
     <motion.div
       className={cn(
         'flex items-center gap-3 p-3 rounded-lg bg-card transition-colors',
         isActive && 'ring-2 ring-primary',
+        isInCheck && 'ring-2 ring-red-500',
         className
       )}
       animate={isActive ? { boxShadow: '0 0 10px var(--primary)' } : {}}
@@ -71,6 +73,12 @@ export function PlayerCard({
           <span className="font-semibold truncate">
             {displayName || username}
           </span>
+          {isInCheck && (
+            <Badge variant="destructive" className="text-xs">
+              <AlertTriangle className="h-3 w-3" />
+              Check
+            </Badge>
+          )}
           {isBot && (
             <Badge variant="secondary" className="text-xs">
               Bot

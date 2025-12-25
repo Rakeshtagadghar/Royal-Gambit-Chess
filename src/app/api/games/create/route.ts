@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { ensureProfileExists } from '@/lib/supabase/ensureProfile';
 import { ColorPreference, TimeControl } from '@/types/chess';
 
 interface CreateGameBody {
@@ -17,6 +18,9 @@ export async function POST(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Ensure `profiles` row exists (common after dev resets).
+    await ensureProfileExists(supabase, user);
 
     const body: CreateGameBody = await request.json();
     const { mode, colorPreference, timeControl } = body;

@@ -37,28 +37,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Game is not active' }, { status: 400 });
     }
 
-    // Check if user is a participant
+    const isBotController = game.mode === 'bot' && game.created_by === user.id;
+
+    // Check if user is a participant (or bot controller)
     const isWhite = game.white_id === user.id;
     const isBlack = game.black_id === user.id;
-    if (!isWhite && !isBlack) {
+    if (!isBotController && !isWhite && !isBlack) {
       return NextResponse.json({ error: 'You are not a participant in this game' }, { status: 403 });
     }
 
-    // Load the game state
-    const chess = new Chess(game.current_fen);
+    // Reconstruct the full game state (including history) from stored moves.
+    // NOTE: chess.js cannot derive move history from a FEN alone, so using `current_fen`
+    // would always yield `history().length === 0` and break sync checks and PGN continuity.
+    const chess = new Chess(game.initial_fen || undefined);
+
+    const { data: moves, error: movesError } = await supabase
+      .from('moves')
+      .select('uci, ply')
+      .eq('game_id', gameId)
+      .order('ply', { ascending: true });
+
+    if (movesError) {
+      console.error('Fetch moves error:', movesError);
+      return NextResponse.json({ error: 'Failed to load move history' }, { status: 500 });
+    }
+
+    for (const m of moves ?? []) {
+      const u = (m.uci as string) ?? '';
+      const from = u.substring(0, 2);
+      const to = u.substring(2, 4);
+      const promotion = u.length > 4 ? u[4] : undefined;
+      const applied = chess.move({ from, to, promotion });
+      if (!applied) {
+        // If history is corrupted, fall back to the stored FEN for legality checks.
+        // (We can't reliably continue reconstructing history from here.)
+        chess.load(game.current_fen);
+        break;
+      }
+    }
 
     // Check if it's the user's turn
     const turn = chess.turn();
-    if ((turn === 'w' && !isWhite) || (turn === 'b' && !isBlack)) {
+    if (!isBotController && ((turn === 'w' && !isWhite) || (turn === 'b' && !isBlack))) {
       return NextResponse.json({ error: 'Not your turn' }, { status: 400 });
     }
 
     // Get move history to check ply
     const history = chess.history();
-    if (history.length !== clientPly) {
+    const serverPly = history.length;
+    if (serverPly !== clientPly) {
       return NextResponse.json({ 
         error: 'Out of sync',
-        serverPly: history.length,
+        serverPly,
         currentFen: chess.fen(),
       }, { status: 409 });
     }
@@ -121,7 +151,7 @@ export async function POST(request: NextRequest) {
       // Insert move record
       await supabase.from('moves').insert({
         game_id: gameId,
-        ply: clientPly + 1,
+        ply: serverPly + 1,
         uci,
         san: move.san,
         fen_after: chess.fen(),

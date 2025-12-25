@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
 import { Square, PieceSymbol } from 'chess.js';
@@ -16,9 +16,14 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Loader2, Copy, Check, Share2 } from 'lucide-react';
 
-type GameRow = Record<string, any>;
+type GameRow = Record<string, any> & {
+  white?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
+  black?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
+};
 
 function transformGameRow(game: GameRow) {
+  const whiteProfile = game.white ?? null;
+  const blackProfile = game.black ?? null;
   return {
     id: game.id,
     mode: game.mode as 'bot' | 'pvp',
@@ -26,14 +31,18 @@ function transformGameRow(game: GameRow) {
     whitePlayer: game.white_id
       ? {
           id: game.white_id,
-          username: 'Player 1',
+          username: whiteProfile?.username ?? 'Player 1',
+          displayName: whiteProfile?.display_name ?? undefined,
+          avatarUrl: whiteProfile?.avatar_url ?? undefined,
           timeRemainingMs: game.time_control?.baseMs || 300000,
         }
       : undefined,
     blackPlayer: game.black_id
       ? {
           id: game.black_id,
-          username: 'Player 2',
+          username: blackProfile?.username ?? 'Player 2',
+          displayName: blackProfile?.display_name ?? undefined,
+          avatarUrl: blackProfile?.avatar_url ?? undefined,
           timeRemainingMs: game.time_control?.baseMs || 300000,
         }
       : undefined,
@@ -59,7 +68,7 @@ export default function GamePage() {
   const params = useParams();
   const router = useRouter();
   const gameId = params.id as string;
-  const { user, isAuthenticated } = useAuth();
+  const { user, profile, isAuthenticated } = useAuth();
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +76,9 @@ export default function GamePage() {
   const [opponentConnected, setOpponentConnected] = useState(false);
   const [rawGame, setRawGame] = useState<GameRow | null>(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [profilesById, setProfilesById] = useState<
+    Record<string, { id: string; username: string; displayName?: string; avatarUrl?: string }>
+  >({});
 
   const {
     status,
@@ -108,7 +120,31 @@ export default function GamePage() {
 
         setRawGame(game);
 
-        loadGame(transformGameRow(game));
+        // If the API already returned nested player profiles, seed our local cache for realtime friendliness.
+        setProfilesById((prev) => {
+          const next = { ...prev };
+          const white = (game as GameRow).white;
+          const black = (game as GameRow).black;
+          if (white?.id) {
+            next[white.id] = {
+              id: white.id,
+              username: white.username,
+              displayName: white.display_name ?? undefined,
+              avatarUrl: white.avatar_url ?? undefined,
+            };
+          }
+          if (black?.id) {
+            next[black.id] = {
+              id: black.id,
+              username: black.username,
+              displayName: black.display_name ?? undefined,
+              avatarUrl: black.avatar_url ?? undefined,
+            };
+          }
+          return next;
+        });
+
+        loadGame(transformGameRow(game as GameRow));
       } catch (err: any) {
         console.error('Error fetching game:', err);
         setError(err?.message || 'Failed to load game');
@@ -129,6 +165,80 @@ export default function GamePage() {
     else if (rawGame.black_id === user.id) setPlayerColor('b');
     else setPlayerColor(null);
   }, [rawGame, user, setPlayerColor]);
+
+  // Load profile info for both players (PvP) so we can show opponent name/avatar.
+  useEffect(() => {
+    const loadProfiles = async () => {
+      if (!rawGame) return;
+
+      // If the realtime payload includes nested profiles (rare) or we already have them cached, skip fetch.
+      const ids = [rawGame.white_id, rawGame.black_id].filter(Boolean) as string[];
+      const missing = ids.filter((id) => !profilesById[id]);
+      if (missing.length === 0) return;
+
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url')
+          .in('id', missing);
+
+        if (error) {
+          console.warn('Failed to load player profiles:', error);
+          return;
+        }
+
+        setProfilesById((prev) => {
+          const next = { ...prev };
+          (data ?? []).forEach((p: Record<string, unknown>) => {
+            const id = p.id as string;
+            next[id] = {
+              id,
+              username: (p.username as string) ?? 'Player',
+              displayName: (p.display_name as string | null | undefined) ?? undefined,
+              avatarUrl: (p.avatar_url as string | null | undefined) ?? undefined,
+            };
+          });
+          return next;
+        });
+      } catch (e) {
+        console.warn('Failed to load player profiles:', e);
+      }
+    };
+
+    loadProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawGame?.white_id, rawGame?.black_id]);
+
+  const youInfo = useMemo(() => {
+    const fallbackName = user?.email?.split('@')[0] || 'You';
+    return {
+      username: profile?.username || fallbackName,
+      displayName: profile?.displayName,
+      avatarUrl: profile?.avatarUrl,
+    };
+  }, [profile?.avatarUrl, profile?.displayName, profile?.username, user?.email]);
+
+  const opponentInfo = useMemo(() => {
+    if (!rawGame) return { username: 'Opponent' as string, displayName: undefined as string | undefined, avatarUrl: undefined as string | undefined, isBot: false as boolean };
+    if (rawGame.mode === 'bot') {
+      return { username: 'Stockfish', displayName: 'Stockfish', avatarUrl: undefined, isBot: true };
+    }
+    if (!user) return { username: 'Opponent', displayName: undefined, avatarUrl: undefined, isBot: false };
+
+    const opponentId =
+      rawGame.white_id === user.id ? (rawGame.black_id as string | null) : (rawGame.white_id as string | null);
+
+    if (!opponentId) return { username: 'Waiting…', displayName: 'Waiting…', avatarUrl: undefined, isBot: false };
+
+    const p = profilesById[opponentId];
+    return {
+      username: p?.username || 'Opponent',
+      displayName: p?.displayName,
+      avatarUrl: p?.avatarUrl,
+      isBot: false,
+    };
+  }, [profilesById, rawGame, user]);
 
   const joinGame = async () => {
     if (!isAuthenticated || !user || !rawGame) return;
@@ -220,7 +330,7 @@ export default function GamePage() {
 
   // Handle move
   const handleMove = useCallback(
-    async (from: Square, to: Square, promotion?: PieceSymbol) => {
+    async (from: Square, to: Square, promotion: PieceSymbol | undefined, clientPly: number) => {
       if (!isAuthenticated) return;
 
       try {
@@ -230,7 +340,7 @@ export default function GamePage() {
           body: JSON.stringify({
             gameId,
             uci: `${from}${to}${promotion || ''}`,
-            clientPly: boardState.moveHistory.length,
+            clientPly,
           }),
         });
 
@@ -243,7 +353,7 @@ export default function GamePage() {
         console.error('Move error:', error);
       }
     },
-    [gameId, boardState.moveHistory.length, isAuthenticated]
+    [gameId, isAuthenticated]
   );
 
   const handleResign = async () => {
@@ -254,9 +364,17 @@ export default function GamePage() {
     
     // Update server
     try {
-      await fetch(`/api/games/${gameId}/resign`, { method: 'POST' });
+      const resp = await fetch(`/api/games/${gameId}/resign`, { method: 'POST' });
+      const j = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(j?.error || 'Failed to resign');
+
+      if (j?.game) {
+        setRawGame(j.game);
+        loadGame(transformGameRow(j.game));
+      }
     } catch (error) {
       console.error('Failed to resign:', error);
+      toast.error('Failed to resign. Please retry.');
     }
   };
 
@@ -389,7 +507,10 @@ export default function GamePage() {
               <div className="w-full max-w-[560px] mb-2">
                 <PlayerCard
                   color={playerColor === 'w' ? 'black' : 'white'}
-                  username="Opponent"
+                  username={opponentInfo.username}
+                  displayName={opponentInfo.displayName}
+                  avatarUrl={opponentInfo.avatarUrl}
+                  isBot={opponentInfo.isBot}
                   isOnline={opponentConnected}
                 />
               </div>
@@ -401,7 +522,9 @@ export default function GamePage() {
               <div className="w-full max-w-[560px] mt-2">
                 <PlayerCard
                   color={playerColor === 'w' ? 'white' : 'black'}
-                  username="You"
+                  username={youInfo.username}
+                  displayName={youInfo.displayName}
+                  avatarUrl={youInfo.avatarUrl}
                   isOnline
                 />
               </div>

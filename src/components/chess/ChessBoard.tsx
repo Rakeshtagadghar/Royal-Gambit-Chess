@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/stores/gameStore';
 import { useSettingsStore, BOARD_THEMES } from '@/stores/settingsStore';
 import { PromotionModal } from './PromotionModal';
+import { ConfettiRain } from './ConfettiRain';
 
 interface ChessBoardProps {
-  onMove?: (from: Square, to: Square, promotion?: PieceSymbol) => void;
+  onMove?: (from: Square, to: Square, promotion: PieceSymbol | undefined, clientPly: number) => void;
   interactive?: boolean;
 }
 
@@ -23,9 +24,9 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     viewingMoveIndex,
     playerColor,
     status,
+    result,
     selectSquare,
     makeMove,
-    setIsAnimating,
   } = useGameStore();
 
   const {
@@ -39,6 +40,11 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
 
   const [promotionMove, setPromotionMove] = useState<{ from: Square; to: Square } | null>(null);
   const [boardWidth, setBoardWidth] = useState(560);
+
+  const shouldConfetti =
+    status === 'finished' &&
+    !!playerColor &&
+    ((playerColor === 'w' && result === '1-0') || (playerColor === 'b' && result === '0-1'));
 
   // Responsive board sizing
   useEffect(() => {
@@ -63,6 +69,15 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     }
     return boardState.moveHistory[viewingMoveIndex]?.fen || boardState.fen;
   }, [viewingMoveIndex, boardState.moveHistory, boardState.fen]);
+
+  // A chess.js instance that matches what we are currently displaying on the board.
+  const displayChess = useMemo(() => {
+    try {
+      return new Chess(displayFen);
+    } catch {
+      return game;
+    }
+  }, [displayFen, game]);
 
   // Check if a square needs promotion
   const isPromotionMove = useCallback(
@@ -98,9 +113,10 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
         return false;
       }
 
+      const clientPly = boardState.moveHistory.length;
       const success = makeMove(source, target);
       if (success) {
-        onMove?.(source, target);
+        onMove?.(source, target, undefined, clientPly);
         selectSquare(null);
       }
       return success;
@@ -129,9 +145,10 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
             return;
           }
 
+          const clientPly = boardState.moveHistory.length;
           const success = makeMove(selectedSquare, sq);
           if (success) {
-            onMove?.(selectedSquare, sq);
+            onMove?.(selectedSquare, sq, undefined, clientPly);
           }
           selectSquare(null);
           return;
@@ -149,14 +166,15 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     (piece: PieceSymbol) => {
       if (!promotionMove) return;
 
+      const clientPly = boardState.moveHistory.length;
       const success = makeMove(promotionMove.from, promotionMove.to, piece);
       if (success) {
-        onMove?.(promotionMove.from, promotionMove.to, piece);
+        onMove?.(promotionMove.from, promotionMove.to, piece, clientPly);
       }
       setPromotionMove(null);
       selectSquare(null);
     },
-    [promotionMove, makeMove, onMove, selectSquare]
+    [promotionMove, makeMove, onMove, selectSquare, boardState.moveHistory.length]
   );
 
   // Get squares with movable pieces (pieces that have legal moves)
@@ -199,7 +217,7 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     // Legal move highlights
     if (showLegalMoves) {
       highlightedSquares.forEach((square) => {
-        const piece = game.get(square);
+        const piece = displayChess.get(square as Square);
         styles[square] = {
           background: piece
             ? 'radial-gradient(circle, transparent 60%, rgba(100, 200, 100, 0.5) 60%)'
@@ -216,10 +234,10 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     }
 
     // Check highlight
-    if (highlightCheck && boardState.isCheck) {
-      // Find the king
-      const kingColor = boardState.turn;
-      const kingSquare = findKingSquare(game, kingColor);
+    if (highlightCheck && displayChess.isCheck()) {
+      // chess.js `isCheck()` means the side to move is in check.
+      const kingColor = displayChess.turn();
+      const kingSquare = findKingSquare(displayChess, kingColor);
       if (kingSquare) {
         styles[kingSquare] = {
           ...styles[kingSquare],
@@ -230,12 +248,13 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     }
 
     return styles;
-  }, [selectedSquare, highlightedSquares, boardState.lastMove, boardState.isCheck, boardState.turn, showLegalMoves, showLastMove, highlightCheck, game, movableSquares]);
+  }, [selectedSquare, highlightedSquares, boardState.lastMove, showLegalMoves, showLastMove, highlightCheck, displayChess, movableSquares]);
 
   const themeColors = BOARD_THEMES[boardTheme];
 
   return (
     <div className="relative" style={{ width: boardWidth, height: boardWidth }}>
+      <ConfettiRain active={shouldConfetti} />
       <motion.div
         className="board-container"
         initial={{ opacity: 0, scale: 0.95 }}
@@ -301,12 +320,20 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
 }
 
 function GameOverMessage() {
-  const { result, termination } = useGameStore();
+  const { result, termination, playerColor } = useGameStore();
 
   const getMessage = () => {
+    if (result === '1/2-1/2') return "It's a draw!";
+
+    // If you're playing, make it player-centric.
+    if (playerColor) {
+      const youWon = (playerColor === 'w' && result === '1-0') || (playerColor === 'b' && result === '0-1');
+      if (youWon) return 'You won!';
+      return 'Good game!';
+    }
+
     if (result === '1-0') return 'White wins!';
     if (result === '0-1') return 'Black wins!';
-    if (result === '1/2-1/2') return 'Draw!';
     return 'Game Over';
   };
 
@@ -328,6 +355,15 @@ function GameOverMessage() {
     <>
       <h2 className="text-2xl font-bold mb-2">{getMessage()}</h2>
       <p className="text-muted-foreground">{getReason()}</p>
+      {playerColor && (result === '1-0' || result === '0-1' || result === '1/2-1/2') && (
+        <p className="text-sm text-muted-foreground mt-3">
+          {result === '1/2-1/2'
+            ? 'Well played by both sides — want a rematch?'
+            : (playerColor === 'w' && result === '1-0') || (playerColor === 'b' && result === '0-1')
+              ? 'Nice work — want a rematch?'
+              : 'You’ll come back stronger next time. Keep practicing and try again!'}
+        </p>
+      )}
     </>
   );
 }
