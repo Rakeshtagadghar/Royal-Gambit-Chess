@@ -11,14 +11,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { useGameStore } from '@/stores/gameStore';
 import { useStockfish } from '@/hooks/useStockfish';
+import { useAuth } from '@/hooks/useAuth';
 import { BOT_DIFFICULTIES, BotDifficulty, TIME_CONTROLS, TimeControl } from '@/types/chess';
 import { cn } from '@/lib/utils';
-import { Bot, Play, RotateCcw, Sparkles } from 'lucide-react';
+import { Bot, Play, RotateCcw } from 'lucide-react';
 
 type GamePhase = 'setup' | 'playing';
 
 export default function BotPage() {
   const router = useRouter();
+  const { profile } = useAuth();
   const [phase, setPhase] = useState<GamePhase>('setup');
   const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>(BOT_DIFFICULTIES[1]);
   const [selectedColor, setSelectedColor] = useState<'white' | 'black' | 'random'>('white');
@@ -220,34 +222,52 @@ export default function BotPage() {
             >
               {/* Top player (opponent) */}
               <div className="w-full max-w-[560px] mb-2">
-                <PlayerCard
-                  color={botColor}
-                  username={`Stockfish ${selectedDifficulty.label}`}
-                  isBot
-                  isOnline
-                />
+                <div className="flex items-center justify-between gap-2">
+                  <PlayerCard
+                    color={botColor}
+                    username={`Stockfish ${selectedDifficulty.label}`}
+                    isBot
+                    isOnline
+                  />
+                  {isThinking && (
+                    <motion.div
+                      className="flex items-center gap-2 bg-gradient-to-r from-primary/20 to-accent/20 backdrop-blur-sm border border-primary/30 px-4 py-2 rounded-xl shadow-lg"
+                      initial={{ opacity: 0, x: 10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 10 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    >
+                      <motion.span
+                        className="text-xl"
+                        animate={{ rotate: [0, -10, 10, -10, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        ♟
+                      </motion.span>
+                      <span className="text-sm font-medium text-foreground">
+                        Analyzing
+                        <motion.span
+                          animate={{ opacity: [0, 1, 0] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          ...
+                        </motion.span>
+                      </span>
+                    </motion.div>
+                  )}
+                </div>
               </div>
 
               {/* Chess board */}
-              <div className="relative">
-                <ChessBoard />
-                {isThinking && (
-                  <motion.div
-                    className="absolute top-2 right-2 flex items-center gap-2 bg-card/90 px-3 py-1.5 rounded-full text-sm"
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-                    Thinking...
-                  </motion.div>
-                )}
-              </div>
+              <ChessBoard />
 
               {/* Bottom player (you) */}
               <div className="w-full max-w-[560px] mt-2">
                 <PlayerCard
                   color={humanColor}
-                  username="You"
+                  username={profile?.username || 'Guest'}
+                  displayName={profile?.displayName}
+                  avatarUrl={profile?.avatarUrl}
                   isOnline
                 />
               </div>

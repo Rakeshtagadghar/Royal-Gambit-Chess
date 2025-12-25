@@ -1,14 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useAuthStore } from '@/stores/authStore';
 import { Profile } from '@/types/chess';
 
+// Map database snake_case to Profile camelCase
+function mapDbProfileToProfile(dbProfile: Record<string, unknown>): Profile {
+  return {
+    id: dbProfile.id as string,
+    username: dbProfile.username as string,
+    displayName: dbProfile.display_name as string | undefined,
+    avatarUrl: dbProfile.avatar_url as string | undefined,
+    createdAt: dbProfile.created_at as string,
+  };
+}
+
 export function useAuth() {
-  const router = useRouter();
   const { user, profile, isLoading, isInitialized, setUser, setProfile, setIsLoading, setIsInitialized, reset } = useAuthStore();
 
   useEffect(() => {
@@ -23,14 +32,41 @@ export function useAuth() {
           setUser(session.user);
           
           // Fetch profile
-          const { data: profileData } = await supabase
+          let { data: profileData } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
           
+          // Create profile if it doesn't exist (OAuth users)
+          if (!profileData) {
+            const userMeta = session.user.user_metadata;
+            const email = session.user.email || '';
+            let username = userMeta?.name?.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 
+                          email.split('@')[0].replace(/[^a-z0-9_]/g, '_') || 
+                          `user_${session.user.id.slice(0, 8)}`;
+            
+            // Add random suffix to avoid username collision
+            const suffix = session.user.id.slice(0, 4);
+            username = `${username}_${suffix}`;
+            
+            const { data: newProfile } = await supabase
+              .from('profiles')
+              .insert({
+                id: session.user.id,
+                username: username,
+                display_name: userMeta?.name || userMeta?.full_name || username,
+                avatar_url: userMeta?.avatar_url || userMeta?.picture || null,
+                created_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
+            
+            profileData = newProfile;
+          }
+          
           if (profileData) {
-            setProfile(profileData as Profile);
+            setProfile(mapDbProfileToProfile(profileData));
           }
         }
       } catch (error) {
@@ -48,15 +84,42 @@ export function useAuth() {
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
         
-        // Fetch or create profile
-        const { data: profileData } = await supabase
+        // Fetch profile
+        let { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
         
+        // Create profile if it doesn't exist (OAuth users)
+        if (!profileData) {
+          const userMeta = session.user.user_metadata;
+          const email = session.user.email || '';
+          let username = userMeta?.name?.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 
+                        email.split('@')[0].replace(/[^a-z0-9_]/g, '_') || 
+                        `user_${session.user.id.slice(0, 8)}`;
+          
+          // Add random suffix to avoid username collision
+          const suffix = session.user.id.slice(0, 4);
+          username = `${username}_${suffix}`;
+          
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .insert({
+              id: session.user.id,
+              username: username,
+              display_name: userMeta?.name || userMeta?.full_name || username,
+              avatar_url: userMeta?.avatar_url || userMeta?.picture || null,
+              created_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+          
+          profileData = newProfile;
+        }
+        
         if (profileData) {
-          setProfile(profileData as Profile);
+          setProfile(mapDbProfileToProfile(profileData));
         }
       } else if (event === 'SIGNED_OUT') {
         reset();
@@ -133,16 +196,14 @@ export function useAuth() {
 
   const signOut = async () => {
     const supabase = getSupabaseClient();
-    setIsLoading(true);
     
     try {
       await supabase.auth.signOut();
       reset();
-      router.push('/');
+      // Use window.location for more reliable redirect after sign out
+      window.location.href = '/';
     } catch (error) {
       console.error('Sign out error:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 

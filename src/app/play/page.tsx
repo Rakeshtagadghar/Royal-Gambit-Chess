@@ -1,11 +1,14 @@
 'use client';
 
+import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bot, Users, UserPlus, Zap, Clock, Trophy } from 'lucide-react';
+import { toast } from 'sonner';
 
 const gameModes = [
   {
@@ -46,10 +49,29 @@ const timeControls = [
   { icon: Trophy, label: 'Rapid', times: ['10+0', '15+10'] },
 ];
 
+function VerificationToast() {
+  const searchParams = useSearchParams();
+  
+  useEffect(() => {
+    if (searchParams.get('verified') === 'true') {
+      toast.success('Email verified!', {
+        description: 'Your account is now active. Welcome to RoyalGambit!',
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/play');
+    }
+  }, [searchParams]);
+  
+  return null;
+}
+
 export default function PlayPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <Suspense fallback={null}>
+        <VerificationToast />
+      </Suspense>
       
       <main className="container mx-auto px-4 py-8">
         <motion.div

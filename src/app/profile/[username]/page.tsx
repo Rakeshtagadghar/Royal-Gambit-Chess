@@ -51,7 +51,14 @@ export default function ProfilePage() {
 
         if (profileError) throw profileError;
         
-        setProfile(profileData);
+        // Map database snake_case to camelCase
+        setProfile({
+          id: profileData.id,
+          username: profileData.username,
+          displayName: profileData.display_name,
+          avatarUrl: profileData.avatar_url,
+          createdAt: profileData.created_at,
+        });
 
         // Fetch game stats
         const { data: games, error: gamesError } = await supabase
@@ -134,13 +141,15 @@ export default function ProfilePage() {
                     {profile.displayName || profile.username}
                   </h1>
                   <p className="text-muted-foreground">@{profile.username}</p>
-                  <div className="flex items-center gap-2 justify-center sm:justify-start mt-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                      month: 'long', 
-                      year: 'numeric' 
-                    })}
-                  </div>
+                  {profile.createdAt && (
+                    <div className="flex items-center gap-2 justify-center sm:justify-start mt-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { 
+                        month: 'long', 
+                        year: 'numeric' 
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {isOwnProfile && (

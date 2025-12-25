@@ -16,23 +16,25 @@ import { Loader2, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { signIn, signUp, signInWithGoogle, isLoading, isAuthenticated } = useAuth();
+  const { signIn, signUp, signInWithGoogle, isInitialized, isAuthenticated } = useAuth();
   
   const [activeTab, setActiveTab] = useState(searchParams.get('signup') ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isInitialized && isAuthenticated) {
       const redirect = searchParams.get('redirect') || '/play';
       router.push(redirect);
     }
-  }, [isAuthenticated, router, searchParams]);
+  }, [isInitialized, isAuthenticated, router, searchParams]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     
     const { error } = await signIn(email, password);
     
@@ -43,6 +45,7 @@ function LoginContent() {
       const redirect = searchParams.get('redirect') || '/play';
       router.push(redirect);
     }
+    setIsSubmitting(false);
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -63,6 +66,7 @@ function LoginContent() {
       return;
     }
 
+    setIsSubmitting(true);
     const { error } = await signUp(email, password, username);
     
     if (error) {
@@ -70,7 +74,17 @@ function LoginContent() {
     } else {
       toast.success('Account created!', { description: 'Please check your email to verify your account.' });
     }
+    setIsSubmitting(false);
   };
+
+  // Show loading while checking initial auth state
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted">
@@ -149,8 +163,8 @@ function LoginContent() {
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Signing in...
@@ -226,8 +240,8 @@ function LoginContent() {
                       />
                     </div>
                   </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Creating account...
@@ -253,7 +267,7 @@ function LoginContent() {
               variant="outline"
               className="w-full"
               onClick={signInWithGoogle}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
