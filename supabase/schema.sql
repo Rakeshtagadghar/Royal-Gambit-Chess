@@ -54,6 +54,23 @@ CREATE TABLE IF NOT EXISTS public.matchmaking_queue (
     UNIQUE (user_id)
 );
 
+-- Invitations table (for friend invites with realtime status updates)
+CREATE TABLE IF NOT EXISTS public.invitations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    from_user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    to_user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    to_email TEXT,
+    status TEXT NOT NULL DEFAULT 'pending'
+      CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled', 'expired')),
+    time_control JSONB NOT NULL DEFAULT '{"baseMs": 300000, "incrementMs": 0}'::jsonb,
+    color_preference TEXT NOT NULL DEFAULT 'random'
+      CHECK (color_preference IN ('white', 'black', 'random')),
+    game_id UUID REFERENCES public.games(id) ON DELETE SET NULL,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_games_white_id ON public.games(white_id);
 CREATE INDEX IF NOT EXISTS idx_games_black_id ON public.games(black_id);
@@ -61,6 +78,9 @@ CREATE INDEX IF NOT EXISTS idx_games_status ON public.games(status);
 CREATE INDEX IF NOT EXISTS idx_games_created_at ON public.games(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_moves_game_id ON public.moves(game_id);
 CREATE INDEX IF NOT EXISTS idx_matchmaking_queue_time_control ON public.matchmaking_queue(time_control);
+CREATE INDEX IF NOT EXISTS idx_invitations_from_user_id_created_at ON public.invitations(from_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invitations_to_user_id_created_at ON public.invitations(to_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invitations_status ON public.invitations(status);
 
 -- Row Level Security Policies
 
@@ -69,6 +89,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.moves ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.matchmaking_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -139,6 +160,20 @@ CREATE POLICY "Service role can read queue"
     ON public.matchmaking_queue FOR SELECT
     USING (true);
 
+-- Invitations policies
+CREATE POLICY "Users can view invitations they sent or received"
+    ON public.invitations FOR SELECT
+    USING (from_user_id = auth.uid() OR to_user_id = auth.uid());
+
+CREATE POLICY "Users can create invitations they send"
+    ON public.invitations FOR INSERT
+    WITH CHECK (from_user_id = auth.uid());
+
+CREATE POLICY "Senders can update their invitations"
+    ON public.invitations FOR UPDATE
+    USING (from_user_id = auth.uid())
+    WITH CHECK (from_user_id = auth.uid());
+
 -- Function to create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -159,7 +194,66 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- SECURITY DEFINER function to join a waiting game.
+-- This avoids RLS blocking the "join" update for a user who is not yet a participant.
+CREATE OR REPLACE FUNCTION public.join_game(p_game_id uuid)
+RETURNS public.games
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_game public.games;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  SELECT * INTO v_game
+  FROM public.games
+  WHERE id = p_game_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Game not found';
+  END IF;
+
+  IF v_game.status <> 'waiting' THEN
+    RAISE EXCEPTION 'Game is not accepting players';
+  END IF;
+
+  -- Already a participant
+  IF v_game.white_id = v_user_id OR v_game.black_id = v_user_id THEN
+    RETURN v_game;
+  END IF;
+
+  IF v_game.white_id IS NULL THEN
+    UPDATE public.games
+    SET white_id = v_user_id,
+        status = CASE WHEN v_game.black_id IS NULL THEN 'waiting' ELSE 'active' END,
+        started_at = CASE WHEN v_game.black_id IS NULL THEN started_at ELSE NOW() END
+    WHERE id = p_game_id
+    RETURNING * INTO v_game;
+    RETURN v_game;
+  ELSIF v_game.black_id IS NULL THEN
+    UPDATE public.games
+    SET black_id = v_user_id,
+        status = 'active',
+        started_at = NOW()
+    WHERE id = p_game_id
+    RETURNING * INTO v_game;
+    RETURN v_game;
+  ELSE
+    RAISE EXCEPTION 'Game is full';
+  END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.join_game(uuid) TO authenticated;
+
 -- Enable Realtime for games table
 ALTER PUBLICATION supabase_realtime ADD TABLE public.games;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.moves;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.invitations;
 

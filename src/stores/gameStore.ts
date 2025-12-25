@@ -59,6 +59,7 @@ interface GameState {
   viewMove: (index: number) => void;
   reset: () => void;
   loadGame: (game: Game) => void;
+  setPlayerColor: (color: Color | null) => void;
   getPgn: () => string;
   getCurrentFen: () => string;
   undoMove: () => boolean;
@@ -353,6 +354,12 @@ export const useGameStore = create<GameState>((set, get) => ({
       viewingMoveIndex: history.length - 1,
     });
   },
+
+  setPlayerColor: (color) =>
+    set({
+      playerColor: color,
+      boardOrientation: color === 'b' ? 'black' : 'white',
+    }),
 
   getPgn: () => get().game.pgn(),
   

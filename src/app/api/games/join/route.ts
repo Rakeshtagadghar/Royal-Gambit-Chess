@@ -18,6 +18,32 @@ export async function POST(request: NextRequest) {
     const body: JoinGameBody = await request.json();
     const { gameId } = body;
 
+    // Preferred: use SQL function (SECURITY DEFINER) to bypass RLS safely.
+    // If the function isn't installed yet, we'll fall back to the old logic below.
+    const { data: rpcGame, error: rpcError } = await supabase.rpc('join_game', {
+      p_game_id: gameId,
+    });
+
+    if (!rpcError && rpcGame) {
+      return NextResponse.json({ game: rpcGame });
+    }
+
+    if (rpcError) {
+      console.warn('join_game RPC failed (falling back):', rpcError);
+      // If the function isn't installed, the fallback will be blocked by RLS for non-participants.
+      if (rpcError.code === 'PGRST202') {
+        return NextResponse.json(
+          {
+            error:
+              'Missing SQL function join_game. Run the join_game function SQL in Supabase (schema.sql) and reload the API schema cache, then retry.',
+            details: rpcError.details,
+            code: rpcError.code,
+          },
+          { status: 500 }
+        );
+      }
+    }
+
     // Get the game
     const { data: game, error: fetchError } = await supabase
       .from('games')
@@ -59,11 +85,30 @@ export async function POST(request: NextRequest) {
       .update(updateData)
       .eq('id', gameId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (updateError) {
       console.error('Join game error:', updateError);
-      return NextResponse.json({ error: 'Failed to join game' }, { status: 500 });
+      return NextResponse.json(
+        {
+          error: 'Failed to join game',
+          details: updateError.message,
+          code: updateError.code,
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!updatedGame) {
+      // This usually means RLS blocked the update (0 rows affected).
+      return NextResponse.json(
+        {
+          error: 'Failed to join game (update was blocked)',
+          details:
+            'No rows were updated. This is usually caused by RLS. Install join_game SQL function to enable joining.',
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ game: updatedGame });

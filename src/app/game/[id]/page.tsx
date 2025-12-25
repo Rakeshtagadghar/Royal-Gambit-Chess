@@ -16,6 +16,45 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Loader2, Copy, Check, Share2 } from 'lucide-react';
 
+type GameRow = Record<string, any>;
+
+function transformGameRow(game: GameRow) {
+  return {
+    id: game.id,
+    mode: game.mode as 'bot' | 'pvp',
+    status: game.status as 'waiting' | 'active' | 'finished' | 'aborted',
+    whitePlayer: game.white_id
+      ? {
+          id: game.white_id,
+          username: 'Player 1',
+          timeRemainingMs: game.time_control?.baseMs || 300000,
+        }
+      : undefined,
+    blackPlayer: game.black_id
+      ? {
+          id: game.black_id,
+          username: 'Player 2',
+          timeRemainingMs: game.time_control?.baseMs || 300000,
+        }
+      : undefined,
+    createdBy: game.created_by,
+    createdAt: game.created_at,
+    startedAt: game.started_at,
+    endedAt: game.ended_at,
+    initialFen:
+      game.initial_fen ||
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    currentFen:
+      game.current_fen ||
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    pgn: game.pgn || '',
+    result: (game.result || '*') as '1-0' | '0-1' | '1/2-1/2' | '*',
+    termination: game.termination,
+    timeControl: game.time_control || { baseMs: 300000, incrementMs: 0 },
+    moves: [],
+  };
+}
+
 export default function GamePage() {
   const params = useParams();
   const router = useRouter();
@@ -26,6 +65,8 @@ export default function GamePage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [opponentConnected, setOpponentConnected] = useState(false);
+  const [rawGame, setRawGame] = useState<GameRow | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
 
   const {
     status,
@@ -34,55 +75,44 @@ export default function GamePage() {
     loadGame,
     makeMove,
     setResult,
+    setPlayerColor,
   } = useGameStore();
 
   // Fetch game data
   useEffect(() => {
     const fetchGame = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
-        const supabase = getSupabaseClient();
-        const { data: game, error: fetchError } = await supabase
-          .from('games')
-          .select('*')
-          .eq('id', gameId)
-          .single();
+        console.log('🔵 Fetching game:', gameId);
 
-        if (fetchError) throw fetchError;
+        const timeoutMs = 10000;
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Timed out loading game. Please retry.')), timeoutMs)
+        );
+
+        const queryPromise = fetch(`/api/games/get?gameId=${encodeURIComponent(gameId)}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const response = await Promise.race([queryPromise, timeoutPromise]);
+        const json = await response.json();
+
+        if (!response.ok) {
+          throw new Error(json?.error || 'Failed to load game');
+        }
+
+        const game = json.game as Record<string, any>;
         if (!game) throw new Error('Game not found');
 
-        // Transform to our Game type
-        const transformedGame = {
-          id: game.id,
-          mode: game.mode as 'bot' | 'pvp',
-          status: game.status as 'waiting' | 'active' | 'finished' | 'aborted',
-          whitePlayer: game.white_id ? {
-            id: game.white_id,
-            username: 'Player 1',
-            timeRemainingMs: game.time_control?.baseMs || 300000,
-          } : undefined,
-          blackPlayer: game.black_id ? {
-            id: game.black_id,
-            username: 'Player 2',
-            timeRemainingMs: game.time_control?.baseMs || 300000,
-          } : undefined,
-          createdBy: game.created_by,
-          createdAt: game.created_at,
-          startedAt: game.started_at,
-          endedAt: game.ended_at,
-          initialFen: game.initial_fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-          currentFen: game.current_fen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-          pgn: game.pgn || '',
-          result: (game.result || '*') as '1-0' | '0-1' | '1/2-1/2' | '*',
-          termination: game.termination,
-          timeControl: game.time_control || { baseMs: 300000, incrementMs: 0 },
-          moves: [],
-        };
+        setRawGame(game);
 
-        loadGame(transformedGame);
-        setIsLoading(false);
-      } catch (err) {
+        loadGame(transformGameRow(game));
+      } catch (err: any) {
         console.error('Error fetching game:', err);
-        setError('Failed to load game');
+        setError(err?.message || 'Failed to load game');
+      } finally {
         setIsLoading(false);
       }
     };
@@ -91,6 +121,48 @@ export default function GamePage() {
       fetchGame();
     }
   }, [gameId, loadGame]);
+
+  // Set player color once we have both the game and the user
+  useEffect(() => {
+    if (!rawGame || !user) return;
+    if (rawGame.white_id === user.id) setPlayerColor('w');
+    else if (rawGame.black_id === user.id) setPlayerColor('b');
+    else setPlayerColor(null);
+  }, [rawGame, user, setPlayerColor]);
+
+  const joinGame = async () => {
+    if (!isAuthenticated || !user || !rawGame) return;
+    setIsJoining(true);
+    try {
+      const res = await fetch('/api/games/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to join game');
+
+      toast.success('Joined game');
+
+      const joinedGame = (data?.game ?? null) as GameRow | null;
+      if (joinedGame) {
+        setRawGame(joinedGame);
+        loadGame(transformGameRow(joinedGame));
+      } else {
+        // Safety fallback: re-load via server API if response didn't include a game
+        const resp = await fetch(`/api/games/get?gameId=${encodeURIComponent(gameId)}`);
+        const j = await resp.json();
+        if (!resp.ok) throw new Error(j?.error || 'Failed to reload game');
+        setRawGame(j.game);
+        loadGame(transformGameRow(j.game));
+      }
+    } catch (e: any) {
+      toast.error(e?.message || 'Failed to join game');
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   // Set up realtime subscription
   useEffect(() => {
@@ -109,9 +181,13 @@ export default function GamePage() {
           table: 'games',
           filter: `id=eq.${gameId}`,
         },
-        (payload: unknown) => {
+        (payload: any) => {
           console.log('Game update:', payload);
-          // Handle game updates
+          const next = payload?.new as GameRow | undefined;
+          if (next && next.id) {
+            setRawGame(next);
+            loadGame(transformGameRow(next));
+          }
         }
       )
       .on(
@@ -211,7 +287,15 @@ export default function GamePage() {
         <main className="container mx-auto px-4 py-8 text-center">
           <h1 className="text-2xl font-bold mb-4">Error</h1>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => router.push('/play')}>Back to Play</Button>
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+            <Button onClick={() => router.push('/play')}>Back to Play</Button>
+          </div>
         </main>
       </div>
     );
@@ -219,6 +303,15 @@ export default function GamePage() {
 
   // Waiting for opponent
   if (status === 'waiting') {
+    const isParticipant =
+      !!user && !!rawGame && (rawGame.white_id === user.id || rawGame.black_id === user.id);
+    const canJoin =
+      !!user &&
+      !!rawGame &&
+      !isParticipant &&
+      rawGame.status === 'waiting' &&
+      (rawGame.white_id === null || rawGame.black_id === null);
+
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -236,12 +329,26 @@ export default function GamePage() {
                 ♟
               </motion.div>
               <p className="text-muted-foreground">
-                Share this link with your friend to start the game
+                {canJoin ? 'Join this game to start playing.' : 'Share this link with your friend to start the game'}
               </p>
+              {canJoin && (
+                <Button className="w-full" onClick={joinGame} disabled={isJoining}>
+                  {isJoining ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Joining...
+                    </>
+                  ) : (
+                    'Join Game'
+                  )}
+                </Button>
+              )}
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={window.location.href}
+                  aria-label="Game link"
+                  title="Game link"
                   readOnly
                   className="flex-1 px-3 py-2 text-sm bg-muted rounded-md font-mono truncate"
                 />

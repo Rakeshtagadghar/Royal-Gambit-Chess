@@ -1,0 +1,359 @@
+{
+    "spec_name": "NextChess Platform (chess.com-like) - Full Build",
+    "spec_version": "1.0.0",
+    "goal": "Build a production-ready chess platform with high-quality animated board, user vs bot, user vs user (real-time), invitations, matchmaking, basic social features, and authentication.",
+    "constraints": {
+      "frontend_framework": "Next.js (App Router) + TypeScript",
+      "free_to_use_packages_only": true,
+      "prefer_free_tier_services": true,
+      "target": ["web"],
+      "quality_bar": "Production-grade UX, smooth board animations, reliable realtime sync, secure auth."
+    },
+    "recommended_stack": {
+      "frontend": {
+        "framework": "Next.js 14+ (App Router)",
+        "language": "TypeScript",
+        "styling": ["TailwindCSS", "shadcn/ui"],
+        "state": ["Zustand (client state)", "TanStack Query (server state)"],
+        "forms_validation": ["react-hook-form", "zod"]
+      },
+      "chess": {
+        "rules_engine": "chess.js",
+        "board_ui_preferred": [
+          {
+            "name": "chessground (lichess board) via react wrapper",
+            "why": "High quality board interactions + smooth animations + proven UX."
+          },
+          {
+            "name": "react-chessboard",
+            "why": "Easy React integration, drag/drop, premoves; add custom CSS transitions for move animations."
+          }
+        ],
+        "bot_engine": [
+          {
+            "name": "Stockfish (WASM / JS build)",
+            "mode": "Runs in Web Worker in-browser",
+            "why": "No server cost, scalable, free."
+          }
+        ]
+      },
+      "backend": {
+        "approach": "Next.js Route Handlers (API) + Supabase Postgres",
+        "auth": "Supabase Auth (email/password + OAuth optional)",
+        "realtime": "Supabase Realtime (channels + postgres changes)",
+        "storage_optional": "Supabase Storage for avatars"
+      },
+      "deployment_free_tier": {
+        "web": "Vercel (Next.js)",
+        "db_auth_realtime": "Supabase Free",
+        "optional_cache": "Upstash Redis Free (only if needed)"
+      }
+    },
+    "free_packages": {
+      "core": [
+        "next",
+        "react",
+        "typescript",
+        "tailwindcss",
+        "zod",
+        "zustand",
+        "@tanstack/react-query",
+        "react-hook-form"
+      ],
+      "chess": [
+        "chess.js",
+        "react-chessground OR react-chessboard",
+        "stockfish (or stockfish.wasm bundle)",
+        "comlink (optional, for cleaner webworker interface)"
+      ],
+      "ui_utils": [
+        "shadcn/ui",
+        "lucide-react",
+        "date-fns",
+        "clsx",
+        "tailwind-merge"
+      ],
+      "testing": [
+        "vitest",
+        "@testing-library/react",
+        "playwright"
+      ],
+      "lint_format": ["eslint", "prettier"]
+    },
+    "architecture": {
+      "rendering_model": {
+        "public_pages": "Server Components where possible",
+        "play_pages": "Client Components for realtime + board interaction"
+      },
+      "realtime_model": {
+        "primary": "Supabase Realtime channels for game rooms + invitations + presence",
+        "fallback": "Polling via React Query if realtime disconnects",
+        "conflict_resolution": "Authoritative move ordering by server timestamp + monotonic move index"
+      },
+      "security_model": {
+        "auth": "JWT via Supabase session",
+        "row_level_security": "Supabase RLS for all tables",
+        "rate_limit": "Basic in-memory or Upstash rate limit on critical endpoints",
+        "anti_cheat_v1": "Minimal: sanity-check moves with chess.js; detect impossible moves; optionally compute engine eval sampling later"
+      }
+    },
+    "data_model": {
+      "tables": [
+        {
+          "name": "profiles",
+          "columns": {
+            "id": "uuid (pk, matches auth.user.id)",
+            "username": "text unique",
+            "display_name": "text",
+            "avatar_url": "text nullable",
+            "created_at": "timestamptz"
+          }
+        },
+        {
+          "name": "games",
+          "columns": {
+            "id": "uuid pk",
+            "status": "text enum: waiting|active|finished|aborted",
+            "mode": "text enum: blitz|rapid|bullet|classical|custom",
+            "time_control": "jsonb { initialSeconds:number, incrementSeconds:number }",
+            "white_player_id": "uuid nullable",
+            "black_player_id": "uuid nullable",
+            "bot_level": "int nullable",
+            "fen": "text",
+            "pgn": "text nullable",
+            "move_index": "int default 0",
+            "result": "text enum nullable: 1-0|0-1|1/2-1/2",
+            "winner_player_id": "uuid nullable",
+            "created_at": "timestamptz",
+            "updated_at": "timestamptz"
+          }
+        },
+        {
+          "name": "game_moves",
+          "columns": {
+            "id": "uuid pk",
+            "game_id": "uuid fk games.id",
+            "move_index": "int",
+            "uci": "text",
+            "san": "text",
+            "fen_after": "text",
+            "by_player_id": "uuid nullable",
+            "created_at": "timestamptz"
+          }
+        },
+        {
+          "name": "invitations",
+          "columns": {
+            "id": "uuid pk",
+            "from_user_id": "uuid fk profiles.id",
+            "to_user_id": "uuid fk profiles.id nullable",
+            "to_email": "text nullable",
+            "status": "text enum: pending|accepted|declined|cancelled|expired",
+            "game_id": "uuid fk games.id nullable",
+            "mode": "text enum: user_vs_user",
+            "time_control": "jsonb",
+            "color_preference": "text enum: white|black|random",
+            "message": "text nullable",
+            "expires_at": "timestamptz",
+            "created_at": "timestamptz",
+            "updated_at": "timestamptz"
+          }
+        },
+        {
+          "name": "matchmaking_queue",
+          "columns": {
+            "id": "uuid pk",
+            "user_id": "uuid fk profiles.id",
+            "mode": "text enum: blitz|rapid|bullet|classical|custom",
+            "time_control": "jsonb",
+            "rating_bucket": "int nullable",
+            "created_at": "timestamptz"
+          }
+        }
+      ],
+      "rls_rules_summary": [
+        "profiles: users can read public profiles; update only own profile",
+        "games: players can read their games; public games optional toggle",
+        "game_moves: only players can insert moves; everyone allowed only if game is public",
+        "invitations: only sender/recipient can read; sender can cancel; recipient can accept/decline"
+      ]
+    },
+    "api_endpoints_nextjs": [
+      {
+        "method": "POST",
+        "path": "/api/auth/username/check",
+        "purpose": "Validate username availability + rules",
+        "body": "{ username }"
+      },
+      {
+        "method": "POST",
+        "path": "/api/games/create",
+        "purpose": "Create game stub (bot or pvp)",
+        "body": "{ type: 'bot'|'pvp', timeControl, colorPreference, botLevel? }"
+      },
+      {
+        "method": "POST",
+        "path": "/api/games/:id/move",
+        "purpose": "Submit a move; validate with chess.js; store move; broadcast realtime update",
+        "body": "{ uci, clientMoveIndex }",
+        "response": "{ ok, fen, moveIndex, san, result? }"
+      },
+      {
+        "method": "POST",
+        "path": "/api/invitations/create",
+        "purpose": "Send invitation to user/email",
+        "body": "{ toUserId?, toEmail?, timeControl, colorPreference, message? }"
+      },
+      {
+        "method": "POST",
+        "path": "/api/invitations/:id/cancel",
+        "purpose": "Cancel invitation (sender only)"
+      },
+      {
+        "method": "POST",
+        "path": "/api/invitations/:id/respond",
+        "purpose": "Accept/decline invitation; when accepted create game and attach game_id",
+        "body": "{ action: 'accept'|'decline' }"
+      },
+      {
+        "method": "POST",
+        "path": "/api/matchmaking/join",
+        "purpose": "Join matchmaking queue",
+        "body": "{ mode, timeControl }"
+      },
+      {
+        "method": "POST",
+        "path": "/api/matchmaking/leave",
+        "purpose": "Leave queue"
+      }
+    ],
+    "realtime_channels": [
+      {
+        "name": "game:{gameId}",
+        "events": ["move_committed", "clock_tick", "game_finished", "player_presence"]
+      },
+      {
+        "name": "invitations:{userId}",
+        "events": ["invitation_created", "invitation_updated", "invitation_cancelled"]
+      },
+      {
+        "name": "matchmaking:{mode}",
+        "events": ["queue_updated", "match_found"]
+      }
+    ],
+    "pages_routes": [
+      { "path": "/", "name": "Home", "features": ["CTA Play", "Login", "Leaderboard teaser"] },
+      { "path": "/login", "name": "Login", "features": ["Supabase auth UI or custom form"] },
+      { "path": "/register", "name": "Register", "features": ["username selection", "validation"] },
+      { "path": "/play", "name": "Play", "features": ["Quick play", "Bot", "Invite friend", "Invitations section", "Matchmaking"] },
+      { "path": "/game/[id]", "name": "Game Room", "features": ["Board", "move list", "clocks", "chat optional", "draw/resign"] },
+      { "path": "/profile/[username]", "name": "Profile", "features": ["stats", "recent games", "edit own profile"] },
+      { "path": "/settings", "name": "Settings", "features": ["profile", "privacy", "theme"] }
+    ],
+    "core_ui_components": [
+      "ChessBoard (animated moves, premove optional, last-move highlight, legal moves highlight)",
+      "Clocks (increment support, pause/end states)",
+      "MoveList (SAN list, jump-to-move, copy PGN)",
+      "GameControls (resign, offer draw, rematch)",
+      "MatchmakingCard (choose time control + queue state)",
+      "InviteModal (select user, time control, message, color)",
+      "InvitationsPanel (incoming + sent + actions)",
+      "AuthForms",
+      "Toasts/Notifications"
+    ],
+    "board_quality_requirements": {
+      "animations": [
+        "Piece slide animation on move",
+        "Capture animation (fade/scale out)",
+        "Check highlight flash",
+        "Last move highlight"
+      ],
+      "ux": [
+        "Drag and drop",
+        "Click-to-move as alternative",
+        "Legal move dots/squares",
+        "Responsive board sizing",
+        "Keyboard accessibility for basic actions"
+      ],
+      "performance": [
+        "60fps target on common laptops",
+        "No re-render storms: memoize board props and move list",
+        "Use Web Worker for Stockfish"
+      ]
+    },
+    "bot_play": {
+      "engine": "Stockfish in Web Worker",
+      "difficulty": {
+        "levels": "1-10",
+        "mapping": "Adjust Stockfish skill level + depth/time per move",
+        "time_budget_ms": [50, 100, 150, 200, 300, 500, 700, 900, 1200, 1500]
+      },
+      "flow": [
+        "User move validated by chess.js",
+        "Update UI immediately (optimistic)",
+        "Send to /api/games/:id/move",
+        "Trigger bot computation locally; submit bot move; store both moves"
+      ]
+    },
+    "pvp_play": {
+      "sync": [
+        "Server validates moves with chess.js (authoritative)",
+        "Realtime broadcast move_committed",
+        "Clients reconcile using move_index and fen_after"
+      ],
+      "clock": [
+        "Store start time + remaining seconds; update via client ticks",
+        "Server emits periodic authoritative clock updates OR on move events"
+      ],
+      "matchmaking_v1": [
+        "Queue by mode + timeControl bucket",
+        "When two users match: create game, assign colors, notify both via realtime"
+      ]
+    },
+    "step_by_step_setup_and_deploy": {
+      "local_prereqs": [
+        "Node.js 20+ (recommend 22 LTS if stable for you)",
+        "pnpm",
+        "Git",
+        "VS Code",
+        "Optional: Docker Desktop (only if you want local Postgres; otherwise use Supabase hosted dev)"
+      ],
+      "local_setup_steps": [
+        "1) pnpm create next-app@latest (TypeScript, App Router, Tailwind)",
+        "2) Add shadcn/ui + required UI primitives",
+        "3) Install chess packages: chess.js + board library + stockfish + web worker setup",
+        "4) Create Supabase project (free) and configure Auth + Database tables + RLS policies",
+        "5) Add Supabase client/server helpers in Next.js (cookies-based session for route handlers)",
+        "6) Implement auth pages + profile creation (username unique)",
+        "7) Implement Play page + Game room page",
+        "8) Implement invitations + matchmaking APIs and realtime subscriptions",
+        "9) Add tests (unit + e2e smoke)",
+        "10) Add basic observability: error boundary + logging"
+      ],
+      "free_deploy_steps": [
+        "1) Push code to GitHub",
+        "2) Deploy Next.js to Vercel (free)",
+        "3) Add environment variables in Vercel (Supabase URL + anon key + service role for server only)",
+        "4) Configure Supabase Auth redirect URLs to Vercel domain",
+        "5) Run Supabase SQL migrations (tables + RLS) on hosted Supabase",
+        "6) Verify realtime works in production (CORS + channels)",
+        "7) Enable basic security headers + rate limiting on critical endpoints"
+      ]
+    },
+    "milestones": [
+      { "name": "M1 - Board + Local Game", "deliverables": ["Animated board", "move validation", "PGN export"] },
+      { "name": "M2 - Auth + Profiles", "deliverables": ["Login/register", "username", "profile page"] },
+      { "name": "M3 - Bot Play", "deliverables": ["Stockfish worker", "levels", "clean UX"] },
+      { "name": "M4 - PvP Realtime", "deliverables": ["Game rooms", "move sync", "clocks"] },
+      { "name": "M5 - Invitations + Matchmaking", "deliverables": ["Invite flows", "queue", "join game"] },
+      { "name": "M6 - Polish + Deploy", "deliverables": ["Responsive", "tests", "Vercel + Supabase prod"] }
+    ],
+    "acceptance_criteria": [
+      "User can register/login and set a unique username",
+      "User can play vs bot with smooth move animations",
+      "User can play vs another user with realtime synchronized moves and clocks",
+      "Invitations work (send, cancel, accept/decline) and start a game reliably",
+      "App deployed on free-tier services and stable under light traffic"
+    ]
+  }
+  
