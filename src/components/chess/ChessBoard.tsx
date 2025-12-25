@@ -159,9 +159,35 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     [promotionMove, makeMove, onMove, selectSquare]
   );
 
+  // Get squares with movable pieces (pieces that have legal moves)
+  const movableSquares = useMemo(() => {
+    const squares: Square[] = [];
+    if (interactive && status === 'active') {
+      // Only highlight pieces that belong to the current player
+      const isPlayerTurn = !playerColor || boardState.turn === playerColor;
+      if (isPlayerTurn) {
+        boardState.legalMoves.forEach((targets, square) => {
+          if (targets.length > 0) {
+            squares.push(square);
+          }
+        });
+      }
+    }
+    return squares;
+  }, [interactive, status, playerColor, boardState.turn, boardState.legalMoves]);
+
   // Custom square styles
   const customSquareStyles = useMemo(() => {
     const styles: Record<string, React.CSSProperties> = {};
+    
+    // Highlight squares with movable pieces
+    if (showLegalMoves && !selectedSquare) {
+      movableSquares.forEach((square) => {
+        styles[square] = {
+          boxShadow: 'inset 0 0 0 3px rgba(100, 200, 100, 0.4)',
+        };
+      });
+    }
     
     // Selected square
     if (selectedSquare && showLegalMoves) {
@@ -204,7 +230,7 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
     }
 
     return styles;
-  }, [selectedSquare, highlightedSquares, boardState.lastMove, boardState.isCheck, boardState.turn, showLegalMoves, showLastMove, highlightCheck, game]);
+  }, [selectedSquare, highlightedSquares, boardState.lastMove, boardState.isCheck, boardState.turn, showLegalMoves, showLastMove, highlightCheck, game, movableSquares]);
 
   const themeColors = BOARD_THEMES[boardTheme];
 

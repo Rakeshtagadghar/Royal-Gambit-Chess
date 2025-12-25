@@ -15,12 +15,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-import { 
-  Home, 
-  Gamepad2, 
-  Archive, 
-  Settings, 
-  LogOut, 
+import {
+  Gamepad2,
+  Archive,
+  Settings,
+  LogOut,
   User,
   Menu,
   X
@@ -36,6 +35,10 @@ export function Navbar() {
   const pathname = usePathname();
   const { user, profile, isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const userMetaPicture = typeof userMeta.picture === 'string' ? userMeta.picture : undefined;
+  const userMetaFullName = typeof userMeta.full_name === 'string' ? userMeta.full_name : undefined;
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -81,9 +84,14 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={profile?.avatarUrl} alt={profile?.username} />
+                      <AvatarImage
+                        src={profile?.avatarUrl || userMetaPicture || undefined}
+                        alt={profile?.username || user?.email || 'User'}
+                      />
                       <AvatarFallback>
-                        {profile?.username?.slice(0, 2).toUpperCase() || 'U'}
+                        {profile?.username?.slice(0, 2).toUpperCase() ||
+                          user?.email?.slice(0, 2).toUpperCase() ||
+                          'U'}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -92,7 +100,11 @@ export function Navbar() {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {profile?.displayName || profile?.username}
+                        {profile?.displayName ||
+                          profile?.username ||
+                          userMetaFullName ||
+                          user?.email?.split('@')[0] ||
+                          'User'}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user?.email}
@@ -101,7 +113,7 @@ export function Navbar() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={`/profile/${profile?.username}`}>
+                    <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'}>
                       <User className="mr-2 h-4 w-4" />
                       Profile
                     </Link>

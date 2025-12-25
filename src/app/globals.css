@@ -215,3 +215,29 @@
   border-radius: 4px;
   overflow: hidden;
 }
+
+/* Chess piece hover effects */
+.board-container [data-square] {
+  transition: all 0.15s ease-out;
+}
+
+/* Piece hover effect - lift up and scale */
+.board-container [data-square] [data-piece] {
+  transition: transform 0.15s ease-out, filter 0.15s ease-out;
+  cursor: grab;
+}
+
+.board-container [data-square]:hover [data-piece] {
+  transform: translateY(-4px) scale(1.08);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+.board-container [data-square] [data-piece]:active {
+  cursor: grabbing;
+  transform: translateY(-2px) scale(1.12);
+}
+
+/* Highlight movable squares on hover */
+.board-container [data-square]:has([data-piece]):hover {
+  background-color: rgba(100, 200, 100, 0.25) !important;
+}

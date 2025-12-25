@@ -50,6 +50,8 @@ export default function ProfilePage() {
           .single();
 
         if (profileError) throw profileError;
+
+        console.log(profileData);
         
         // Map database snake_case to camelCase
         setProfile({
@@ -115,6 +117,8 @@ export default function ProfilePage() {
       </div>
     );
   }
+
+  console.log(profile);
 
   return (
     <div className="min-h-screen bg-background">
