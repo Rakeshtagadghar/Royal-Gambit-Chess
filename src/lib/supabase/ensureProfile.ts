@@ -60,3 +60,6 @@ export async function ensureProfileExists(supabase: SupabaseClient, user: User) 
 }
 
 
+
+
+
