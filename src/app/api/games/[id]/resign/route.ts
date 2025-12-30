@@ -75,7 +75,24 @@ export async function POST(_request: NextRequest, context: { params: Promise<{ i
       return NextResponse.json({ error: 'Failed to resign' }, { status: 500 });
     }
 
-    return NextResponse.json({ game: updated });
+    // Process ratings for PvP games
+    let ratingResult = null;
+    if (updated?.mode === 'pvp') {
+      const { data: ratingsData, error: ratingsError } = await supabase
+        .rpc('process_game_ratings', { p_game_id: gameId });
+      
+      if (ratingsError) {
+        console.error('Process ratings error:', ratingsError);
+        // Don't fail the request, just log the error
+      } else {
+        ratingResult = ratingsData;
+      }
+    }
+
+    return NextResponse.json({ 
+      game: updated,
+      ...(ratingResult ? { ratings: ratingResult } : {}),
+    });
   } catch (error) {
     console.error('Resign error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

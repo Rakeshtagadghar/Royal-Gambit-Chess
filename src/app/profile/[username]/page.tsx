@@ -2,31 +2,46 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { Profile } from '@/types/chess';
+import { Profile, Rating, RatingMode } from '@/types/chess';
 import { 
   User, 
   Trophy, 
   Calendar,
   Gamepad2,
   TrendingUp,
-  Loader2 
+  Loader2,
+  Zap,
+  Flame,
+  Timer,
+  Clock
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const MODE_CONFIG: Record<RatingMode, { label: string; icon: React.ReactNode; color: string; bgColor: string }> = {
+  bullet: { label: 'Bullet', icon: <Zap className="h-4 w-4" />, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
+  blitz: { label: 'Blitz', icon: <Flame className="h-4 w-4" />, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+  rapid: { label: 'Rapid', icon: <Timer className="h-4 w-4" />, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+  classical: { label: 'Classical', icon: <Clock className="h-4 w-4" />, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+};
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const username = params.username as string;
   const { user, profile: currentUserProfile } = useAuth();
   
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [ratings, setRatings] = useState<Rating[]>([]);
   const [stats, setStats] = useState({
     gamesPlayed: 0,
     wins: 0,
@@ -50,8 +65,6 @@ export default function ProfilePage() {
           .single();
 
         if (profileError) throw profileError;
-
-        console.log(profileData);
         
         // Map database snake_case to camelCase
         setProfile({
@@ -62,30 +75,65 @@ export default function ProfilePage() {
           createdAt: profileData.created_at,
         });
 
-        // Fetch game stats
-        const { data: games, error: gamesError } = await supabase
-          .from('games')
-          .select('result, white_id, black_id')
-          .or(`white_id.eq.${profileData.id},black_id.eq.${profileData.id}`)
-          .eq('status', 'finished');
+        // Fetch ratings
+        const { data: ratingsData, error: ratingsError } = await supabase
+          .from('ratings')
+          .select('*')
+          .eq('user_id', profileData.id);
 
-        if (!gamesError && games) {
-          let wins = 0, losses = 0, draws = 0;
-          games.forEach((game: { result: string; white_id: string; black_id: string }) => {
-            const isWhite = game.white_id === profileData.id;
-            if (game.result === '1/2-1/2') {
-              draws++;
-            } else if ((game.result === '1-0' && isWhite) || (game.result === '0-1' && !isWhite)) {
-              wins++;
-            } else {
-              losses++;
-            }
-          });
+        if (!ratingsError && ratingsData) {
+          const transformedRatings = ratingsData.map((r: Record<string, unknown>) => ({
+            userId: r.user_id as string,
+            mode: r.mode as RatingMode,
+            elo: r.elo as number,
+            gamesPlayed: r.games_played as number,
+            wins: r.wins as number,
+            losses: r.losses as number,
+            draws: r.draws as number,
+            updatedAt: r.updated_at as string,
+          }));
+          setRatings(transformedRatings);
           
-          const gamesPlayed = wins + losses + draws;
-          const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
-          
-          setStats({ gamesPlayed, wins, losses, draws, winRate });
+          // Calculate total stats from ratings
+          const totalStats = transformedRatings.reduce(
+            (acc, r) => ({
+              gamesPlayed: acc.gamesPlayed + r.gamesPlayed,
+              wins: acc.wins + r.wins,
+              losses: acc.losses + r.losses,
+              draws: acc.draws + r.draws,
+            }),
+            { gamesPlayed: 0, wins: 0, losses: 0, draws: 0 }
+          );
+          const winRate = totalStats.gamesPlayed > 0 
+            ? Math.round((totalStats.wins / totalStats.gamesPlayed) * 100) 
+            : 0;
+          setStats({ ...totalStats, winRate });
+        } else {
+          // Fallback: Fetch game stats directly
+          const { data: games, error: gamesError } = await supabase
+            .from('games')
+            .select('result, white_id, black_id')
+            .or(`white_id.eq.${profileData.id},black_id.eq.${profileData.id}`)
+            .eq('status', 'finished');
+
+          if (!gamesError && games) {
+            let wins = 0, losses = 0, draws = 0;
+            games.forEach((game: { result: string; white_id: string; black_id: string }) => {
+              const isWhite = game.white_id === profileData.id;
+              if (game.result === '1/2-1/2') {
+                draws++;
+              } else if ((game.result === '1-0' && isWhite) || (game.result === '0-1' && !isWhite)) {
+                wins++;
+              } else {
+                losses++;
+              }
+            });
+            
+            const gamesPlayed = wins + losses + draws;
+            const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
+            
+            setStats({ gamesPlayed, wins, losses, draws, winRate });
+          }
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -118,7 +166,6 @@ export default function ProfilePage() {
     );
   }
 
-  console.log(profile);
 
   return (
     <div className="min-h-screen bg-background">
@@ -164,6 +211,38 @@ export default function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Ratings Cards */}
+          {ratings.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Ratings
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {(Object.keys(MODE_CONFIG) as RatingMode[]).map((mode) => {
+                  const rating = ratings.find((r) => r.mode === mode);
+                  const config = MODE_CONFIG[mode];
+                  return (
+                    <Card key={mode} className={cn('cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all', config.bgColor)}>
+                      <CardContent className="pt-6 text-center" onClick={() => router.push(`/leaderboard?mode=${mode}`)}>
+                        <div className={cn('flex items-center justify-center gap-2 mb-2', config.color)}>
+                          {config.icon}
+                          <span className="font-medium">{config.label}</span>
+                        </div>
+                        <p className="text-2xl font-bold">{rating?.elo ?? 1200}</p>
+                        {rating && rating.gamesPlayed > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {rating.gamesPlayed} games
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

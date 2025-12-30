@@ -22,12 +22,14 @@ import {
   LogOut,
   User,
   Menu,
-  X
+  X,
+  Trophy
 } from 'lucide-react';
 import { useState } from 'react';
 
 const navItems = [
   { href: '/play', label: 'Play', icon: Gamepad2 },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/archive', label: 'Archive', icon: Archive },
 ];
 

@@ -157,6 +157,20 @@ export async function POST(request: NextRequest) {
         fen_after: chess.fen(),
       });
 
+      // Process ratings if game ended and it's a PvP game
+      let ratingResult = null;
+      if (status === 'finished' && game.mode === 'pvp') {
+        const { data: ratingsData, error: ratingsError } = await supabase
+          .rpc('process_game_ratings', { p_game_id: gameId });
+        
+        if (ratingsError) {
+          console.error('Process ratings error:', ratingsError);
+          // Don't fail the request, just log the error
+        } else {
+          ratingResult = ratingsData;
+        }
+      }
+
       return NextResponse.json({
         accepted: true,
         game: {
@@ -166,6 +180,7 @@ export async function POST(request: NextRequest) {
           result,
           termination,
         },
+        ...(ratingResult ? { ratings: ratingResult } : {}),
       });
     } catch {
       return NextResponse.json({ error: 'Invalid move format' }, { status: 400 });

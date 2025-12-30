@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 CREATE TABLE IF NOT EXISTS public.games (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     mode TEXT NOT NULL CHECK (mode IN ('bot', 'pvp')),
+    game_mode TEXT NOT NULL DEFAULT 'blitz' CHECK (game_mode IN ('bullet', 'blitz', 'rapid', 'classical')),
     status TEXT NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'active', 'finished', 'aborted')),
     white_id UUID REFERENCES public.profiles(id),
     black_id UUID REFERENCES public.profiles(id),
@@ -30,7 +31,41 @@ CREATE TABLE IF NOT EXISTS public.games (
     pgn TEXT DEFAULT '',
     result TEXT DEFAULT '*' CHECK (result IN ('1-0', '0-1', '1/2-1/2', '*')),
     termination TEXT CHECK (termination IN ('checkmate', 'resign', 'timeout', 'stalemate', 'draw_agreement', 'insufficient_material', 'threefold_repetition', 'fifty_move_rule', 'aborted')),
-    time_control JSONB DEFAULT '{"baseMs": 300000, "incrementMs": 0}'::jsonb
+    time_control JSONB DEFAULT '{"baseMs": 300000, "incrementMs": 0}'::jsonb,
+    ratings_processed BOOLEAN DEFAULT FALSE
+);
+
+-- Ratings table (ELO per user per time control mode)
+CREATE TABLE IF NOT EXISTS public.ratings (
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    mode TEXT NOT NULL CHECK (mode IN ('bullet', 'blitz', 'rapid', 'classical')),
+    elo INTEGER NOT NULL DEFAULT 1200,
+    games_played INTEGER NOT NULL DEFAULT 0,
+    wins INTEGER NOT NULL DEFAULT 0,
+    losses INTEGER NOT NULL DEFAULT 0,
+    draws INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, mode)
+);
+
+-- Rating history table (append-only audit trail for ELO changes)
+CREATE TABLE IF NOT EXISTS public.rating_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    mode TEXT NOT NULL CHECK (mode IN ('bullet', 'blitz', 'rapid', 'classical')),
+    game_id UUID NOT NULL REFERENCES public.games(id) ON DELETE CASCADE,
+    elo_before INTEGER NOT NULL,
+    elo_after INTEGER NOT NULL,
+    delta INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RTC Rooms table (video/audio chat metadata per game)
+CREATE TABLE IF NOT EXISTS public.rtc_rooms (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    game_id UUID NOT NULL UNIQUE REFERENCES public.games(id) ON DELETE CASCADE,
+    created_by UUID NOT NULL REFERENCES public.profiles(id),
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Moves table
@@ -75,12 +110,18 @@ CREATE TABLE IF NOT EXISTS public.invitations (
 CREATE INDEX IF NOT EXISTS idx_games_white_id ON public.games(white_id);
 CREATE INDEX IF NOT EXISTS idx_games_black_id ON public.games(black_id);
 CREATE INDEX IF NOT EXISTS idx_games_status ON public.games(status);
+CREATE INDEX IF NOT EXISTS idx_games_game_mode ON public.games(game_mode);
 CREATE INDEX IF NOT EXISTS idx_games_created_at ON public.games(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_moves_game_id ON public.moves(game_id);
 CREATE INDEX IF NOT EXISTS idx_matchmaking_queue_time_control ON public.matchmaking_queue(time_control);
 CREATE INDEX IF NOT EXISTS idx_invitations_from_user_id_created_at ON public.invitations(from_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_invitations_to_user_id_created_at ON public.invitations(to_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_invitations_status ON public.invitations(status);
+CREATE INDEX IF NOT EXISTS idx_ratings_mode_elo ON public.ratings(mode, elo DESC);
+CREATE INDEX IF NOT EXISTS idx_ratings_user_id ON public.ratings(user_id);
+CREATE INDEX IF NOT EXISTS idx_rating_history_user_id ON public.rating_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_rating_history_game_id ON public.rating_history(game_id);
+CREATE INDEX IF NOT EXISTS idx_rtc_rooms_game_id ON public.rtc_rooms(game_id);
 
 -- Row Level Security Policies
 
@@ -90,6 +131,9 @@ ALTER TABLE public.games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.moves ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.matchmaking_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ratings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rating_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.rtc_rooms ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -174,6 +218,49 @@ CREATE POLICY "Senders can update their invitations"
     USING (from_user_id = auth.uid())
     WITH CHECK (from_user_id = auth.uid());
 
+-- Receivers can also update invitations (to accept/decline)
+CREATE POLICY "Receivers can update their invitations"
+    ON public.invitations FOR UPDATE
+    USING (to_user_id = auth.uid())
+    WITH CHECK (to_user_id = auth.uid());
+
+-- Ratings policies (public read, no client writes - only via server/functions)
+CREATE POLICY "Ratings are viewable by everyone"
+    ON public.ratings FOR SELECT
+    USING (true);
+
+-- Rating history policies (owner can read their own history)
+CREATE POLICY "Users can view their own rating history"
+    ON public.rating_history FOR SELECT
+    USING (user_id = auth.uid());
+
+-- Public can view rating history for leaderboard context
+CREATE POLICY "Rating history is publicly viewable"
+    ON public.rating_history FOR SELECT
+    USING (true);
+
+-- RTC Rooms policies
+CREATE POLICY "RTC rooms are viewable by game participants"
+    ON public.rtc_rooms FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.games g
+            WHERE g.id = game_id
+            AND (g.white_id = auth.uid() OR g.black_id = auth.uid())
+        )
+    );
+
+CREATE POLICY "Game participants can create RTC rooms"
+    ON public.rtc_rooms FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.games g
+            WHERE g.id = game_id
+            AND (g.white_id = auth.uid() OR g.black_id = auth.uid())
+        )
+        AND auth.uid() = created_by
+    );
+
 -- Function to create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -256,4 +343,252 @@ GRANT EXECUTE ON FUNCTION public.join_game(uuid) TO authenticated;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.games;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.moves;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.invitations;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.ratings;
+
+-- Leaderboard view: ranks users by ELO per mode
+-- Uses security_invoker to respect RLS policies
+DROP VIEW IF EXISTS public.leaderboard_global;
+
+CREATE VIEW public.leaderboard_global 
+WITH (security_invoker = true)
+AS
+SELECT 
+    r.user_id,
+    r.mode,
+    r.elo,
+    r.games_played,
+    r.wins,
+    r.losses,
+    r.draws,
+    p.username,
+    p.display_name,
+    p.avatar_url,
+    RANK() OVER (PARTITION BY r.mode ORDER BY r.elo DESC, r.games_played DESC) as rank
+FROM public.ratings r
+JOIN public.profiles p ON p.id = r.user_id
+WHERE r.games_played > 0;
+
+-- Function to initialize ratings for a user (all modes at 1200)
+CREATE OR REPLACE FUNCTION public.initialize_user_ratings(p_user_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    INSERT INTO public.ratings (user_id, mode, elo, games_played, wins, losses, draws)
+    VALUES 
+        (p_user_id, 'bullet', 1200, 0, 0, 0, 0),
+        (p_user_id, 'blitz', 1200, 0, 0, 0, 0),
+        (p_user_id, 'rapid', 1200, 0, 0, 0, 0),
+        (p_user_id, 'classical', 1200, 0, 0, 0, 0)
+    ON CONFLICT (user_id, mode) DO NOTHING;
+END;
+$$;
+
+-- Function to calculate ELO change
+-- K-factor: 32 for players with <30 games, 24 for 30-100 games, 16 for 100+ games
+CREATE OR REPLACE FUNCTION public.calculate_elo_delta(
+    p_player_elo INTEGER,
+    p_opponent_elo INTEGER,
+    p_player_games INTEGER,
+    p_result NUMERIC  -- 1 for win, 0 for loss, 0.5 for draw
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+IMMUTABLE
+AS $$
+DECLARE
+    v_k_factor INTEGER;
+    v_expected NUMERIC;
+    v_delta INTEGER;
+BEGIN
+    -- Determine K-factor based on games played
+    IF p_player_games < 30 THEN
+        v_k_factor := 32;
+    ELSIF p_player_games < 100 THEN
+        v_k_factor := 24;
+    ELSE
+        v_k_factor := 16;
+    END IF;
+    
+    -- Calculate expected score (ELO formula)
+    v_expected := 1.0 / (1.0 + POWER(10.0, (p_opponent_elo - p_player_elo) / 400.0));
+    
+    -- Calculate ELO change
+    v_delta := ROUND(v_k_factor * (p_result - v_expected));
+    
+    RETURN v_delta;
+END;
+$$;
+
+-- SECURITY DEFINER function to process game result and update ratings
+-- This should only be called by server-side code (API routes)
+CREATE OR REPLACE FUNCTION public.process_game_ratings(p_game_id UUID)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_game RECORD;
+    v_white_rating RECORD;
+    v_black_rating RECORD;
+    v_white_result NUMERIC;
+    v_black_result NUMERIC;
+    v_white_delta INTEGER;
+    v_black_delta INTEGER;
+BEGIN
+    -- Get game info
+    SELECT * INTO v_game
+    FROM public.games
+    WHERE id = p_game_id
+    FOR UPDATE;
+    
+    IF NOT FOUND THEN
+        RETURN json_build_object('error', 'Game not found');
+    END IF;
+    
+    -- Only process PvP games
+    IF v_game.mode != 'pvp' THEN
+        RETURN json_build_object('error', 'Not a PvP game');
+    END IF;
+    
+    -- Only process finished games
+    IF v_game.status != 'finished' THEN
+        RETURN json_build_object('error', 'Game not finished');
+    END IF;
+    
+    -- Don't process if already done
+    IF v_game.ratings_processed THEN
+        RETURN json_build_object('error', 'Ratings already processed');
+    END IF;
+    
+    -- Check both players exist
+    IF v_game.white_id IS NULL OR v_game.black_id IS NULL THEN
+        RETURN json_build_object('error', 'Missing player');
+    END IF;
+    
+    -- Initialize ratings if they don't exist
+    PERFORM public.initialize_user_ratings(v_game.white_id);
+    PERFORM public.initialize_user_ratings(v_game.black_id);
+    
+    -- Get current ratings
+    SELECT * INTO v_white_rating
+    FROM public.ratings
+    WHERE user_id = v_game.white_id AND mode = v_game.game_mode;
+    
+    SELECT * INTO v_black_rating
+    FROM public.ratings
+    WHERE user_id = v_game.black_id AND mode = v_game.game_mode;
+    
+    -- Determine results
+    IF v_game.result = '1-0' THEN
+        v_white_result := 1.0;
+        v_black_result := 0.0;
+    ELSIF v_game.result = '0-1' THEN
+        v_white_result := 0.0;
+        v_black_result := 1.0;
+    ELSIF v_game.result = '1/2-1/2' THEN
+        v_white_result := 0.5;
+        v_black_result := 0.5;
+    ELSE
+        RETURN json_build_object('error', 'Invalid result');
+    END IF;
+    
+    -- Calculate ELO changes
+    v_white_delta := public.calculate_elo_delta(
+        v_white_rating.elo,
+        v_black_rating.elo,
+        v_white_rating.games_played,
+        v_white_result
+    );
+    
+    v_black_delta := public.calculate_elo_delta(
+        v_black_rating.elo,
+        v_white_rating.elo,
+        v_black_rating.games_played,
+        v_black_result
+    );
+    
+    -- Insert rating history for white
+    INSERT INTO public.rating_history (user_id, mode, game_id, elo_before, elo_after, delta)
+    VALUES (
+        v_game.white_id,
+        v_game.game_mode,
+        p_game_id,
+        v_white_rating.elo,
+        v_white_rating.elo + v_white_delta,
+        v_white_delta
+    );
+    
+    -- Insert rating history for black
+    INSERT INTO public.rating_history (user_id, mode, game_id, elo_before, elo_after, delta)
+    VALUES (
+        v_game.black_id,
+        v_game.game_mode,
+        p_game_id,
+        v_black_rating.elo,
+        v_black_rating.elo + v_black_delta,
+        v_black_delta
+    );
+    
+    -- Update white's rating
+    UPDATE public.ratings
+    SET 
+        elo = elo + v_white_delta,
+        games_played = games_played + 1,
+        wins = wins + CASE WHEN v_white_result = 1.0 THEN 1 ELSE 0 END,
+        losses = losses + CASE WHEN v_white_result = 0.0 THEN 1 ELSE 0 END,
+        draws = draws + CASE WHEN v_white_result = 0.5 THEN 1 ELSE 0 END,
+        updated_at = NOW()
+    WHERE user_id = v_game.white_id AND mode = v_game.game_mode;
+    
+    -- Update black's rating
+    UPDATE public.ratings
+    SET 
+        elo = elo + v_black_delta,
+        games_played = games_played + 1,
+        wins = wins + CASE WHEN v_black_result = 1.0 THEN 1 ELSE 0 END,
+        losses = losses + CASE WHEN v_black_result = 0.0 THEN 1 ELSE 0 END,
+        draws = draws + CASE WHEN v_black_result = 0.5 THEN 1 ELSE 0 END,
+        updated_at = NOW()
+    WHERE user_id = v_game.black_id AND mode = v_game.game_mode;
+    
+    -- Mark game as processed
+    UPDATE public.games
+    SET ratings_processed = TRUE
+    WHERE id = p_game_id;
+    
+    RETURN json_build_object(
+        'success', true,
+        'white_delta', v_white_delta,
+        'black_delta', v_black_delta,
+        'white_new_elo', v_white_rating.elo + v_white_delta,
+        'black_new_elo', v_black_rating.elo + v_black_delta
+    );
+END;
+$$;
+
+-- Also initialize ratings when profile is created
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.profiles (id, username, display_name)
+    VALUES (
+        NEW.id,
+        COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || substr(NEW.id::text, 1, 8)),
+        COALESCE(NEW.raw_user_meta_data->>'username', 'User')
+    );
+    
+    -- Initialize ratings for the new user
+    PERFORM public.initialize_user_ratings(NEW.id);
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execute permissions
+GRANT EXECUTE ON FUNCTION public.initialize_user_ratings(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.process_game_ratings(UUID) TO authenticated;
 

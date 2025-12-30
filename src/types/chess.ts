@@ -1,6 +1,7 @@
 import { Square, Color, PieceSymbol } from 'chess.js';
 
 export type GameMode = 'bot' | 'pvp';
+export type RatingMode = 'bullet' | 'blitz' | 'rapid' | 'classical';
 export type GameStatus = 'waiting' | 'active' | 'finished' | 'aborted';
 export type GameResult = '1-0' | '0-1' | '1/2-1/2' | '*';
 export type GameTermination = 
@@ -14,6 +15,54 @@ export type GameTermination =
   | 'fifty_move_rule'
   | 'aborted';
 
+// Rating system types
+export interface Rating {
+  userId: string;
+  mode: RatingMode;
+  elo: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  updatedAt: string;
+}
+
+export interface RatingHistory {
+  id: string;
+  userId: string;
+  mode: RatingMode;
+  gameId: string;
+  eloBefore: number;
+  eloAfter: number;
+  delta: number;
+  createdAt: string;
+}
+
+export interface LeaderboardEntry {
+  userId: string;
+  mode: RatingMode;
+  elo: number;
+  gamesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  username: string;
+  displayName?: string;
+  avatarUrl?: string;
+  rank: number;
+}
+
+// Utility function to determine rating mode from time control
+export function getRatingModeFromTimeControl(timeControl: TimeControl): RatingMode {
+  const totalTimeSeconds = timeControl.baseMs / 1000;
+  const estimatedGameTime = totalTimeSeconds + (40 * timeControl.incrementMs / 1000); // Assuming ~40 moves
+  
+  if (estimatedGameTime < 180) return 'bullet';       // < 3 minutes
+  if (estimatedGameTime < 600) return 'blitz';        // 3-10 minutes
+  if (estimatedGameTime < 1800) return 'rapid';       // 10-30 minutes
+  return 'classical';                                  // 30+ minutes
+}
+
 export interface TimeControl {
   baseMs: number;
   incrementMs: number;
@@ -25,6 +74,7 @@ export interface GamePlayer {
   displayName?: string;
   avatarUrl?: string;
   rating?: number;
+  ratingDelta?: number; // ELO change after game ends
   timeRemainingMs: number;
 }
 
@@ -41,6 +91,7 @@ export interface Move {
 export interface Game {
   id: string;
   mode: GameMode;
+  gameMode: RatingMode; // Rating category: bullet, blitz, rapid, classical
   status: GameStatus;
   whitePlayer?: GamePlayer;
   blackPlayer?: GamePlayer;
@@ -55,6 +106,7 @@ export interface Game {
   termination?: GameTermination;
   timeControl: TimeControl;
   moves: Move[];
+  ratingsProcessed?: boolean;
 }
 
 export interface BotDifficulty {
@@ -111,6 +163,7 @@ export interface Profile {
     losses: number;
     draws: number;
   };
+  ratings?: Rating[];
 }
 
 export type ColorPreference = 'white' | 'black' | 'random';

@@ -27,6 +27,7 @@ function transformGameRow(game: GameRow) {
   return {
     id: game.id,
     mode: game.mode as 'bot' | 'pvp',
+    gameMode: (game.game_mode || 'blitz') as 'bullet' | 'blitz' | 'rapid' | 'classical',
     status: game.status as 'waiting' | 'active' | 'finished' | 'aborted',
     whitePlayer: game.white_id
       ? {
@@ -60,6 +61,7 @@ function transformGameRow(game: GameRow) {
     result: (game.result || '*') as '1-0' | '0-1' | '1/2-1/2' | '*',
     termination: game.termination,
     timeControl: game.time_control || { baseMs: 300000, incrementMs: 0 },
+    ratingsProcessed: game.ratings_processed || false,
     moves: [],
   };
 }

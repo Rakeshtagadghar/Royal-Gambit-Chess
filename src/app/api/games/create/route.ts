@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { ensureProfileExists } from '@/lib/supabase/ensureProfile';
-import { ColorPreference, TimeControl } from '@/types/chess';
+import { ColorPreference, TimeControl, getRatingModeFromTimeControl } from '@/types/chess';
 
 interface CreateGameBody {
   mode: 'bot' | 'pvp';
@@ -42,11 +42,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine the rating mode based on time control
+    const gameMode = getRatingModeFromTimeControl(timeControl);
+
     // Create the game
     const { data: game, error: createError } = await supabase
       .from('games')
       .insert({
         mode,
+        game_mode: gameMode,
         status: mode === 'bot' ? 'active' : 'waiting',
         white_id: whiteId,
         black_id: blackId,
