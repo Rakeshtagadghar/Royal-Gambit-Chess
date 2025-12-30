@@ -21,6 +21,7 @@ import {
   Clock,
   Link as LinkIcon
 } from 'lucide-react';
+import { apiUrls } from '@/lib/api/urls';
 
 function LobbyContent() {
   const router = useRouter();
@@ -48,7 +49,7 @@ function LobbyContent() {
 
     setIsCreating(true);
     try {
-      const response = await fetch('/api/games/create', {
+      const response = await fetch(apiUrls.games.create(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,7 +91,7 @@ function LobbyContent() {
         gameId = gameId.split('/game/').pop() || '';
       }
 
-      const response = await fetch('/api/games/join', {
+      const response = await fetch(apiUrls.games.join(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId }),
@@ -116,7 +117,7 @@ function LobbyContent() {
     redirectedRef.current = false;
     queueStartedAtRef.current = new Date().toISOString();
     try {
-      const response = await fetch('/api/matchmaking/enqueue', {
+      const response = await fetch(apiUrls.matchmaking.enqueue(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ timeControl: selectedTimeControl }),
@@ -140,7 +141,7 @@ function LobbyContent() {
 
   const leaveQueue = async () => {
     try {
-      await fetch('/api/matchmaking/dequeue', {
+      await fetch(apiUrls.matchmaking.dequeue(), {
         method: 'POST',
       });
       setIsQueuing(false);
@@ -217,12 +218,11 @@ function LobbyContent() {
     const poll = async () => {
       if (redirectedRef.current) return;
       try {
-        const qs = new URLSearchParams({
+        const res = await fetch(apiUrls.games.ongoing({
           since,
-          baseMs: selectedTimeControl.baseMs.toString(),
-          incrementMs: selectedTimeControl.incrementMs.toString(),
-        });
-        const res = await fetch(`/api/games/ongoing?${qs.toString()}`, { cache: 'no-store' });
+          baseMs: selectedTimeControl.baseMs,
+          incrementMs: selectedTimeControl.incrementMs,
+        }), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         if (data?.gameId) maybeRedirectToGame(data.gameId);

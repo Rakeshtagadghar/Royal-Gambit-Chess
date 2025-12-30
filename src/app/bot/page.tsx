@@ -16,6 +16,7 @@ import { BOT_DIFFICULTIES, BotDifficulty, TIME_CONTROLS, TimeControl } from '@/t
 import { cn } from '@/lib/utils';
 import { Bot, Play, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrls } from '@/lib/api/urls';
 
 type GamePhase = 'setup' | 'playing';
 
@@ -46,7 +47,7 @@ export default function BotPage() {
     async (from: string, to: string, promotion: string | undefined, clientPly: number) => {
       if (!gameId) return;
       try {
-        const resp = await fetch('/api/games/move', {
+        const resp = await fetch(apiUrls.games.move(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -109,7 +110,7 @@ export default function BotPage() {
 
     (async () => {
       try {
-        const resp = await fetch(`/api/games/${gameId}/timeout`, {
+        const resp = await fetch(apiUrls.games.timeout(gameId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ result }),
@@ -131,7 +132,7 @@ export default function BotPage() {
       : selectedColor;
 
     try {
-      const resp = await fetch('/api/games/create', {
+      const resp = await fetch(apiUrls.games.create(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -163,7 +164,7 @@ export default function BotPage() {
 
     if (gameId) {
       try {
-        await fetch(`/api/games/${gameId}/resign`, { method: 'POST' });
+        await fetch(apiUrls.games.resign(gameId), { method: 'POST' });
       } catch {
         // ignore
       }

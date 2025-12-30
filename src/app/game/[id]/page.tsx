@@ -16,6 +16,7 @@ import type { Game, TimeControl } from '@/types/chess';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Loader2, Copy, Check, Share2 } from 'lucide-react';
+import { apiUrls } from '@/lib/api/urls';
 
 type GameRow = {
   id: string;
@@ -131,7 +132,7 @@ export default function GamePage() {
 
     (async () => {
       try {
-        const resp = await fetch(`/api/games/${gameId}/timeout`, {
+        const resp = await fetch(apiUrls.games.timeout(gameId), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ result }),
@@ -164,7 +165,7 @@ export default function GamePage() {
           setTimeout(() => reject(new Error('Timed out loading game. Please retry.')), timeoutMs)
         );
 
-        const queryPromise = fetch(`/api/games/get?gameId=${encodeURIComponent(gameId)}`, {
+        const queryPromise = fetch(apiUrls.games.get(gameId), {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
         });
@@ -305,7 +306,7 @@ export default function GamePage() {
     if (!isAuthenticated || !user || !rawGame) return;
     setIsJoining(true);
     try {
-      const res = await fetch('/api/games/join', {
+      const res = await fetch(apiUrls.games.join(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ gameId }),
@@ -322,7 +323,7 @@ export default function GamePage() {
         loadGame(transformGameRow(joinedGame));
       } else {
         // Safety fallback: re-load via server API if response didn't include a game
-        const resp = await fetch(`/api/games/get?gameId=${encodeURIComponent(gameId)}`);
+        const resp = await fetch(apiUrls.games.get(gameId));
         const j = await resp.json();
         if (!resp.ok) throw new Error(j?.error || 'Failed to reload game');
         setRawGame(j.game);
@@ -396,7 +397,7 @@ export default function GamePage() {
       if (!isAuthenticated) return;
 
       try {
-        const response = await fetch('/api/games/move', {
+        const response = await fetch(apiUrls.games.move(), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -426,7 +427,7 @@ export default function GamePage() {
     
     // Update server
     try {
-      const resp = await fetch(`/api/games/${gameId}/resign`, { method: 'POST' });
+      const resp = await fetch(apiUrls.games.resign(gameId), { method: 'POST' });
       const j = await resp.json().catch(() => ({}));
       if (!resp.ok) throw new Error(j?.error || 'Failed to resign');
 

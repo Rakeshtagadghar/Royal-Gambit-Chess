@@ -9,6 +9,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import { apiUrls } from '@/lib/api/urls';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -112,7 +113,7 @@ export function SentInvitationsList() {
     queryKey: SENT_INVITES_QUERY_KEY,
     enabled: !!userId,
     queryFn: async (): Promise<Invitation[]> => {
-      const res = await fetch('/api/invitations/sent', { method: 'GET' });
+      const res = await fetch(apiUrls.invitations.sent(), { method: 'GET' });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error || 'Failed to load sent invitations');
@@ -197,7 +198,7 @@ export function SentInvitationsList() {
 
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/invitations/${id}/cancel`, { method: 'POST' });
+      const res = await fetch(apiUrls.invitations.cancel(id), { method: 'POST' });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(body.error || 'Failed to cancel invitation');

@@ -22,6 +22,7 @@ import {
   Crown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { apiUrls } from '@/lib/api/urls';
 
 const MODE_CONFIG: Record<RatingMode, { label: string; icon: React.ReactNode; color: string }> = {
   bullet: { label: 'Bullet', icon: <Zap className="h-4 w-4" />, color: 'text-yellow-500' },
@@ -56,7 +57,7 @@ export default function LeaderboardPage() {
     const fetchLeaderboard = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/leaderboard?mode=${activeMode}&limit=100`);
+        const response = await fetch(apiUrls.leaderboard.get({ mode: activeMode, limit: 100 }));
         if (!response.ok) throw new Error('Failed to fetch leaderboard');
         
         const data = await response.json();
