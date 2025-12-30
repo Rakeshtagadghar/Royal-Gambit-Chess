@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Square } from 'chess.js';
 import type { PieceSymbol } from 'chess.js';
@@ -29,6 +29,8 @@ export default function BotPage() {
   const {
     boardState,
     status,
+    result,
+    termination,
     playerColor,
     gameId,
     initGame,
@@ -37,6 +39,8 @@ export default function BotPage() {
     reset,
     getCurrentFen,
   } = useGameStore();
+
+  const timeoutSyncedRef = useRef(false);
 
   const submitMove = useCallback(
     async (from: string, to: string, promotion: string | undefined, clientPly: number) => {
@@ -93,6 +97,33 @@ export default function BotPage() {
       return () => clearTimeout(timeout);
     }
   }, [phase, status, playerColor, boardState.turn, isThinking, think, getCurrentFen]);
+
+  // Persist timeout result to server (clock is client-driven, so we must sync the final status).
+  useEffect(() => {
+    if (!gameId) return;
+    if (status !== 'finished') return;
+    if (termination !== 'timeout') return;
+    if (timeoutSyncedRef.current) return;
+
+    timeoutSyncedRef.current = true;
+
+    (async () => {
+      try {
+        const resp = await fetch(`/api/games/${gameId}/timeout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result }),
+        });
+        if (!resp.ok) {
+          const j = await resp.json().catch(() => ({}));
+          throw new Error(j?.error || 'Failed to sync timeout');
+        }
+      } catch (e) {
+        console.error('Failed to sync timeout:', e);
+        timeoutSyncedRef.current = false;
+      }
+    })();
+  }, [gameId, status, termination, result]);
 
   const startGame = async () => {
     const color = selectedColor === 'random' 

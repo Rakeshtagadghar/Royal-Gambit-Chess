@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
 import { Square, PieceSymbol } from 'chess.js';
@@ -12,18 +12,42 @@ import { Separator } from '@/components/ui/separator';
 import { useGameStore } from '@/stores/gameStore';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
+import type { Game, TimeControl } from '@/types/chess';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Loader2, Copy, Check, Share2 } from 'lucide-react';
 
-type GameRow = Record<string, any> & {
+type GameRow = {
+  id: string;
+  mode: 'bot' | 'pvp';
+  game_mode?: string | null;
+  status: 'waiting' | 'active' | 'finished' | 'aborted';
+  white_id: string | null;
+  black_id: string | null;
+  created_by: string;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  initial_fen: string | null;
+  current_fen: string | null;
+  pgn: string | null;
+  result: string | null;
+  termination: string | null;
+  time_control: TimeControl | null;
+  ratings_processed: boolean | null;
   white?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
   black?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
 };
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
 function transformGameRow(game: GameRow) {
   const whiteProfile = game.white ?? null;
   const blackProfile = game.black ?? null;
+  const timeControl: TimeControl = game.time_control ?? { baseMs: 300000, incrementMs: 0 };
+  const termination = (game.termination ?? undefined) as Game['termination'];
   return {
     id: game.id,
     mode: game.mode as 'bot' | 'pvp',
@@ -35,7 +59,7 @@ function transformGameRow(game: GameRow) {
           username: whiteProfile?.username ?? 'Player 1',
           displayName: whiteProfile?.display_name ?? undefined,
           avatarUrl: whiteProfile?.avatar_url ?? undefined,
-          timeRemainingMs: game.time_control?.baseMs || 300000,
+          timeRemainingMs: timeControl.baseMs,
         }
       : undefined,
     blackPlayer: game.black_id
@@ -44,13 +68,13 @@ function transformGameRow(game: GameRow) {
           username: blackProfile?.username ?? 'Player 2',
           displayName: blackProfile?.display_name ?? undefined,
           avatarUrl: blackProfile?.avatar_url ?? undefined,
-          timeRemainingMs: game.time_control?.baseMs || 300000,
+          timeRemainingMs: timeControl.baseMs,
         }
       : undefined,
     createdBy: game.created_by,
     createdAt: game.created_at,
-    startedAt: game.started_at,
-    endedAt: game.ended_at,
+    startedAt: game.started_at ?? undefined,
+    endedAt: game.ended_at ?? undefined,
     initialFen:
       game.initial_fen ||
       'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -59,11 +83,11 @@ function transformGameRow(game: GameRow) {
       'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     pgn: game.pgn || '',
     result: (game.result || '*') as '1-0' | '0-1' | '1/2-1/2' | '*',
-    termination: game.termination,
-    timeControl: game.time_control || { baseMs: 300000, incrementMs: 0 },
+    termination,
+    timeControl,
     ratingsProcessed: game.ratings_processed || false,
     moves: [],
-  };
+  } satisfies Game;
 }
 
 export default function GamePage() {
@@ -84,13 +108,48 @@ export default function GamePage() {
 
   const {
     status,
-    boardState,
+    result,
+    termination,
     playerColor,
     loadGame,
-    makeMove,
     setResult,
     setPlayerColor,
   } = useGameStore();
+
+  const timeoutSyncedRef = useRef(false);
+
+  // Persist timeout result to server (clock is client-driven, so we must sync the final status).
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!gameId) return;
+    if (status !== 'finished') return;
+    if (termination !== 'timeout') return;
+    if (timeoutSyncedRef.current) return;
+    if (rawGame?.status === 'finished') return;
+
+    timeoutSyncedRef.current = true;
+
+    (async () => {
+      try {
+        const resp = await fetch(`/api/games/${gameId}/timeout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result }),
+        });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(j?.error || 'Failed to sync timeout');
+
+        if (j?.game) {
+          setRawGame(j.game);
+          loadGame(transformGameRow(j.game));
+        }
+      } catch (e) {
+        console.error('Failed to sync timeout:', e);
+        // Allow retry if the request failed.
+        timeoutSyncedRef.current = false;
+      }
+    })();
+  }, [isAuthenticated, gameId, status, termination, result, rawGame?.status, loadGame]);
 
   // Fetch game data
   useEffect(() => {
@@ -117,10 +176,10 @@ export default function GamePage() {
           throw new Error(json?.error || 'Failed to load game');
         }
 
-        const game = json.game as Record<string, any>;
-        if (!game) throw new Error('Game not found');
+        const game = (json as { game?: unknown } | null)?.game;
+        if (!isRecord(game) || typeof game.id !== 'string') throw new Error('Game not found');
 
-        setRawGame(game);
+        setRawGame(game as unknown as GameRow);
 
         // If the API already returned nested player profiles, seed our local cache for realtime friendliness.
         setProfilesById((prev) => {
@@ -146,10 +205,10 @@ export default function GamePage() {
           return next;
         });
 
-        loadGame(transformGameRow(game as GameRow));
-      } catch (err: any) {
+        loadGame(transformGameRow(game as unknown as GameRow));
+      } catch (err: unknown) {
         console.error('Error fetching game:', err);
-        setError(err?.message || 'Failed to load game');
+        setError(err instanceof Error ? err.message : 'Failed to load game');
       } finally {
         setIsLoading(false);
       }
@@ -269,8 +328,8 @@ export default function GamePage() {
         setRawGame(j.game);
         loadGame(transformGameRow(j.game));
       }
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to join game');
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to join game');
     } finally {
       setIsJoining(false);
     }
@@ -293,12 +352,13 @@ export default function GamePage() {
           table: 'games',
           filter: `id=eq.${gameId}`,
         },
-        (payload: any) => {
+        (payload: { new?: unknown } | unknown) => {
           console.log('Game update:', payload);
-          const next = payload?.new as GameRow | undefined;
+          const next = isRecord(payload) ? (payload.new as unknown) : undefined;
+          if (!isRecord(next)) return;
           if (next && next.id) {
-            setRawGame(next);
-            loadGame(transformGameRow(next));
+            setRawGame(next as GameRow);
+            loadGame(transformGameRow(next as GameRow));
           }
         }
       )
@@ -328,7 +388,7 @@ export default function GamePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameId, isLoading, user]);
+  }, [gameId, isLoading, user, loadGame]);
 
   // Handle move
   const handleMove = useCallback(
