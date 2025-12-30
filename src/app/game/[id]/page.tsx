@@ -5,18 +5,40 @@ import { motion } from 'framer-motion';
 import { useParams, useRouter } from 'next/navigation';
 import { Square, PieceSymbol } from 'chess.js';
 import { Navbar } from '@/components/layout/Navbar';
-import { ChessBoard, MoveList, PlayerCard, GameActions, MoveControls } from '@/components/chess';
+import { ChessBoard, MoveList, PlayerCard, GameActions, MoveControls, GameChatPanel, VideoCallPanel } from '@/components/chess';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGameStore } from '@/stores/gameStore';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Loader2, Copy, Check, Share2 } from 'lucide-react';
+import type { GameTermination } from '@/types/chess';
 
-type GameRow = Record<string, any> & {
+type TimeControlRow = { baseMs?: number; incrementMs?: number } | null;
+
+type GameRow = {
+  id: string;
+  mode: 'bot' | 'pvp';
+  game_mode?: 'bullet' | 'blitz' | 'rapid' | 'classical' | string | null;
+  status: 'waiting' | 'active' | 'finished' | 'aborted' | string;
+  spectate_allowed?: boolean | null;
+  white_id: string | null;
+  black_id: string | null;
+  created_by: string;
+  created_at: string;
+  started_at?: string | null;
+  ended_at?: string | null;
+  initial_fen?: string | null;
+  current_fen?: string | null;
+  pgn?: string | null;
+  result?: '1-0' | '0-1' | '1/2-1/2' | '*' | string | null;
+  termination?: string | null;
+  time_control?: TimeControlRow;
+  ratings_processed?: boolean | null;
   white?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
   black?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
 };
@@ -24,6 +46,8 @@ type GameRow = Record<string, any> & {
 function transformGameRow(game: GameRow) {
   const whiteProfile = game.white ?? null;
   const blackProfile = game.black ?? null;
+  const baseMs = game.time_control?.baseMs ?? 300000;
+  const incrementMs = game.time_control?.incrementMs ?? 0;
   return {
     id: game.id,
     mode: game.mode as 'bot' | 'pvp',
@@ -35,7 +59,7 @@ function transformGameRow(game: GameRow) {
           username: whiteProfile?.username ?? 'Player 1',
           displayName: whiteProfile?.display_name ?? undefined,
           avatarUrl: whiteProfile?.avatar_url ?? undefined,
-          timeRemainingMs: game.time_control?.baseMs || 300000,
+          timeRemainingMs: baseMs,
         }
       : undefined,
     blackPlayer: game.black_id
@@ -44,13 +68,13 @@ function transformGameRow(game: GameRow) {
           username: blackProfile?.username ?? 'Player 2',
           displayName: blackProfile?.display_name ?? undefined,
           avatarUrl: blackProfile?.avatar_url ?? undefined,
-          timeRemainingMs: game.time_control?.baseMs || 300000,
+          timeRemainingMs: baseMs,
         }
       : undefined,
     createdBy: game.created_by,
     createdAt: game.created_at,
-    startedAt: game.started_at,
-    endedAt: game.ended_at,
+    startedAt: game.started_at ?? undefined,
+    endedAt: game.ended_at ?? undefined,
     initialFen:
       game.initial_fen ||
       'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -59,8 +83,8 @@ function transformGameRow(game: GameRow) {
       'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     pgn: game.pgn || '',
     result: (game.result || '*') as '1-0' | '0-1' | '1/2-1/2' | '*',
-    termination: game.termination,
-    timeControl: game.time_control || { baseMs: 300000, incrementMs: 0 },
+    termination: (game.termination ?? undefined) as GameTermination | undefined,
+    timeControl: { baseMs, incrementMs },
     ratingsProcessed: game.ratings_processed || false,
     moves: [],
   };
@@ -81,16 +105,26 @@ export default function GamePage() {
   const [profilesById, setProfilesById] = useState<
     Record<string, { id: string; username: string; displayName?: string; avatarUrl?: string }>
   >({});
+  const [isLeavingSpectate, setIsLeavingSpectate] = useState(false);
+  const [spectateJoined, setSpectateJoined] = useState(false);
 
   const {
     status,
-    boardState,
     playerColor,
     loadGame,
-    makeMove,
     setResult,
     setPlayerColor,
   } = useGameStore();
+
+  const role = useMemo(() => {
+    if (!rawGame || !user) return 'anonymous' as const;
+    if (rawGame.white_id === user.id || rawGame.black_id === user.id) return 'player' as const;
+    return 'spectator' as const;
+  }, [rawGame, user]);
+
+  const isPlayer = role === 'player';
+  const canSpectate =
+    !!rawGame && rawGame.mode === 'pvp' && rawGame.status === 'active' && rawGame.spectate_allowed !== false;
 
   // Fetch game data
   useEffect(() => {
@@ -117,8 +151,8 @@ export default function GamePage() {
           throw new Error(json?.error || 'Failed to load game');
         }
 
-        const game = json.game as Record<string, any>;
-        if (!game) throw new Error('Game not found');
+        const game = json.game as GameRow | undefined;
+        if (!game?.id) throw new Error('Game not found');
 
         setRawGame(game);
 
@@ -146,10 +180,11 @@ export default function GamePage() {
           return next;
         });
 
-        loadGame(transformGameRow(game as GameRow));
-      } catch (err: any) {
+        loadGame(transformGameRow(game));
+      } catch (err: unknown) {
         console.error('Error fetching game:', err);
-        setError(err?.message || 'Failed to load game');
+        const msg = err instanceof Error ? err.message : 'Failed to load game';
+        setError(msg);
       } finally {
         setIsLoading(false);
       }
@@ -266,11 +301,14 @@ export default function GamePage() {
         const resp = await fetch(`/api/games/get?gameId=${encodeURIComponent(gameId)}`);
         const j = await resp.json();
         if (!resp.ok) throw new Error(j?.error || 'Failed to reload game');
-        setRawGame(j.game);
-        loadGame(transformGameRow(j.game));
+        const reloaded = j.game as GameRow | undefined;
+        if (!reloaded?.id) throw new Error('Failed to reload game');
+        setRawGame(reloaded);
+        loadGame(transformGameRow(reloaded));
       }
-    } catch (e: any) {
-      toast.error(e?.message || 'Failed to join game');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to join game';
+      toast.error(msg);
     } finally {
       setIsJoining(false);
     }
@@ -293,9 +331,9 @@ export default function GamePage() {
           table: 'games',
           filter: `id=eq.${gameId}`,
         },
-        (payload: any) => {
+        (payload: unknown) => {
           console.log('Game update:', payload);
-          const next = payload?.new as GameRow | undefined;
+          const next = (payload as { new?: GameRow } | null)?.new;
           if (next && next.id) {
             setRawGame(next);
             loadGame(transformGameRow(next));
@@ -316,19 +354,76 @@ export default function GamePage() {
         }
       )
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        setOpponentConnected(Object.keys(state).length > 1);
+        const state = channel.presenceState() as Record<string, Array<{ user_id?: string; role?: string }>>;
+        const peers = Object.values(state).flat();
+        const players = peers
+          .filter((p) => p?.role === 'player')
+          .map((p) => p?.user_id)
+          .filter((id): id is string => !!id);
+        const uniquePlayers = Array.from(new Set(players));
+        setOpponentConnected(uniquePlayers.length >= 2 || (isPlayer && uniquePlayers.some((id) => id !== user?.id)));
       })
       .subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED' && user) {
-          await channel.track({ user_id: user.id });
+          await channel.track({ user_id: user.id, role: isPlayer ? 'player' : 'spectator' });
         }
       });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameId, isLoading, user]);
+  }, [gameId, isLoading, user, isPlayer, loadGame]);
+
+  // Auto-join as spectator (to enable chat RLS)
+  useEffect(() => {
+    if (!gameId || !rawGame) return;
+    if (!isAuthenticated || !user) return;
+    if (isPlayer) return;
+    if (!canSpectate) return;
+
+    setSpectateJoined(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/spectate/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gameId }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(j?.error || 'Failed to join as spectator');
+        if (!cancelled) setSpectateJoined(true);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Failed to join as spectator';
+        if (!cancelled) toast.error(msg);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [gameId, rawGame, isAuthenticated, user, isPlayer, canSpectate]);
+
+  const leaveSpectate = async () => {
+    if (!isAuthenticated || !user) return;
+    setIsLeavingSpectate(true);
+    try {
+      const res = await fetch('/api/spectate/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Failed to leave spectating');
+      setSpectateJoined(false);
+      router.push('/play');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Failed to leave';
+      toast.error(msg);
+    } finally {
+      setIsLeavingSpectate(false);
+    }
+  };
 
   // Handle move
   const handleMove = useCallback(
@@ -518,7 +613,7 @@ export default function GamePage() {
               </div>
 
               {/* Chess board */}
-              <ChessBoard onMove={handleMove} />
+              <ChessBoard onMove={handleMove} interactive={isPlayer} />
 
               {/* Bottom player (you) */}
               <div className="w-full max-w-[560px] mt-2">
@@ -539,12 +634,24 @@ export default function GamePage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg">Game</CardTitle>
-                  <span className={cn(
-                    'text-sm px-2 py-1 rounded',
-                    status === 'active' ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'
-                  )}>
-                    {status === 'active' ? 'In Progress' : status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {role === 'spectator' && (
+                      <span className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-500">Spectating</span>
+                    )}
+                    {role === 'player' && (
+                      <span className="text-xs px-2 py-1 rounded bg-purple-500/20 text-purple-500">Playing</span>
+                    )}
+                    <span
+                      className={cn(
+                        'text-sm px-2 py-1 rounded',
+                        status === 'active'
+                          ? 'bg-green-500/20 text-green-500'
+                          : 'bg-muted text-muted-foreground'
+                      )}
+                    >
+                      {status === 'active' ? 'In Progress' : status}
+                    </span>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -554,26 +661,67 @@ export default function GamePage() {
                     'h-2 w-2 rounded-full',
                     opponentConnected ? 'bg-green-500' : 'bg-yellow-500'
                   )} />
-                  {opponentConnected ? 'Opponent connected' : 'Waiting for opponent'}
+                  {role === 'player'
+                    ? opponentConnected
+                      ? 'Opponent connected'
+                      : 'Waiting for opponent'
+                    : opponentConnected
+                      ? 'Players connected'
+                      : 'Waiting for players'}
                 </div>
 
                 <Separator />
 
-                {/* Move List */}
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Moves</h3>
-                  <MoveList className="border rounded-lg" />
-                  <MoveControls />
-                </div>
+                {role === 'spectator' && isAuthenticated && (
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={leaveSpectate}
+                    disabled={isLeavingSpectate}
+                  >
+                    {isLeavingSpectate ? 'Leaving…' : 'Leave Spectate'}
+                  </Button>
+                )}
 
-                <Separator />
+                <Tabs defaultValue="moves" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="moves">Moves</TabsTrigger>
+                    <TabsTrigger value="chat">Chat</TabsTrigger>
+                  </TabsList>
 
-                {/* Game Actions */}
-                <GameActions
-                  onResign={handleResign}
-                  onOfferDraw={handleOfferDraw}
-                  showRematch={status === 'finished'}
-                />
+                  <TabsContent value="moves" className="space-y-4">
+                    <div>
+                      <h3 className="text-sm font-medium mb-2">Moves</h3>
+                      <MoveList className="border rounded-lg" />
+                      <MoveControls />
+                    </div>
+
+                    <Separator />
+
+                    <GameActions
+                      onResign={handleResign}
+                      onOfferDraw={handleOfferDraw}
+                      showRematch={status === 'finished'}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="chat" className="space-y-3">
+                    <GameChatPanel
+                      gameId={gameId}
+                      currentUserId={user?.id ?? null}
+                      senderRole={role === 'player' ? 'player' : role === 'spectator' ? 'spectator' : null}
+                      enabled={role === 'player' ? true : role === 'spectator' ? spectateJoined : false}
+                      canSend={role === 'player' ? true : role === 'spectator' ? spectateJoined : false}
+                    />
+
+                    {role === 'player' && (
+                      <>
+                        <Separator />
+                        <VideoCallPanel gameId={gameId} />
+                      </>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </div>
