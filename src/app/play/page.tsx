@@ -8,7 +8,6 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { InvitationsPanel } from '@/components/invitations/InvitationsPanel';
-import { OngoingGamesList } from '@/components/ongoing/OngoingGamesList';
 import { Bot, Users, UserPlus, Zap, Clock, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -132,16 +131,6 @@ export default function PlayPage() {
           className="mb-12"
         >
           <InvitationsPanel />
-        </motion.div>
-
-        {/* Ongoing Games (Spectate) */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="mb-12"
-        >
-          <OngoingGamesList />
         </motion.div>
 
         {/* Time Controls Info */}

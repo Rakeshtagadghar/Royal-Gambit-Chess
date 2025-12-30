@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { TIME_CONTROLS, TimeControl, ColorPreference } from '@/types/chess';
 import { toast } from 'sonner';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { 
   Users, 
   UserPlus, 
@@ -36,6 +37,8 @@ function LobbyContent() {
   const [isJoining, setIsJoining] = useState(false);
   const [isQueuing, setIsQueuing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const queueStartedAtRef = useRef<string | null>(null);
+  const redirectedRef = useRef(false);
 
   const createGame = async () => {
     if (!isAuthenticated) {
@@ -110,6 +113,8 @@ function LobbyContent() {
     }
 
     setIsQueuing(true);
+    redirectedRef.current = false;
+    queueStartedAtRef.current = new Date().toISOString();
     try {
       const response = await fetch('/api/matchmaking/enqueue', {
         method: 'POST',
@@ -119,8 +124,14 @@ function LobbyContent() {
 
       if (!response.ok) throw new Error('Failed to join queue');
 
+      const payload = await response.json().catch(() => ({}));
+      if (payload?.matched && payload?.gameId) {
+        redirectedRef.current = true;
+        router.push(`/game/${payload.gameId}`);
+        return;
+      }
+
       toast.success('Looking for an opponent...');
-      // In a real implementation, we'd listen for a match via realtime
     } catch (error) {
       toast.error('Failed to join queue');
       setIsQueuing(false);
@@ -138,6 +149,97 @@ function LobbyContent() {
       console.error('Failed to leave queue:', error);
     }
   };
+
+  useEffect(() => {
+    if (!isQueuing) return;
+    if (!isAuthenticated || !user?.id) return;
+    if (redirectedRef.current) return;
+
+    const since = queueStartedAtRef.current ?? new Date().toISOString();
+    const supabase = getSupabaseClient();
+
+    const matchesSelectedTimeControl = (timeControl: unknown) => {
+      const tc = timeControl as { baseMs?: number | string; incrementMs?: number | string } | null;
+      if (!tc) return false;
+      const base = Number(tc.baseMs);
+      const inc = Number(tc.incrementMs);
+      return base === selectedTimeControl.baseMs && inc === selectedTimeControl.incrementMs;
+    };
+
+    const maybeRedirectToGame = (gameId: string) => {
+      if (redirectedRef.current) return;
+      redirectedRef.current = true;
+      router.push(`/game/${gameId}`);
+    };
+
+    // Realtime: listen for a new game where current user is white or black.
+    const channelWhite = supabase
+      .channel(`mm-white-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'games',
+          filter: `white_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.status !== 'active') return;
+          if (!matchesSelectedTimeControl(row?.time_control)) return;
+          if (row?.created_at && row.created_at < since) return;
+          if (row?.id) maybeRedirectToGame(row.id);
+        }
+      )
+      .subscribe();
+
+    const channelBlack = supabase
+      .channel(`mm-black-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'games',
+          filter: `black_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          if (row?.status !== 'active') return;
+          if (!matchesSelectedTimeControl(row?.time_control)) return;
+          if (row?.created_at && row.created_at < since) return;
+          if (row?.id) maybeRedirectToGame(row.id);
+        }
+      )
+      .subscribe();
+
+    // Polling fallback in case realtime is not configured/enabled.
+    const poll = async () => {
+      if (redirectedRef.current) return;
+      try {
+        const qs = new URLSearchParams({
+          since,
+          baseMs: selectedTimeControl.baseMs.toString(),
+          incrementMs: selectedTimeControl.incrementMs.toString(),
+        });
+        const res = await fetch(`/api/games/ongoing?${qs.toString()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.gameId) maybeRedirectToGame(data.gameId);
+      } catch {
+        // ignore
+      }
+    };
+
+    poll();
+    const interval = window.setInterval(poll, 2000);
+
+    return () => {
+      window.clearInterval(interval);
+      supabase.removeChannel(channelWhite);
+      supabase.removeChannel(channelBlack);
+    };
+  }, [isQueuing, isAuthenticated, user?.id, selectedTimeControl.baseMs, selectedTimeControl.incrementMs, router]);
 
   const copyLink = () => {
     if (gameLink) {

@@ -20,7 +20,6 @@ CREATE TABLE IF NOT EXISTS public.games (
     mode TEXT NOT NULL CHECK (mode IN ('bot', 'pvp')),
     game_mode TEXT NOT NULL DEFAULT 'blitz' CHECK (game_mode IN ('bullet', 'blitz', 'rapid', 'classical')),
     status TEXT NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'active', 'finished', 'aborted')),
-    spectate_allowed BOOLEAN NOT NULL DEFAULT TRUE,
     white_id UUID REFERENCES public.profiles(id),
     black_id UUID REFERENCES public.profiles(id),
     created_by UUID NOT NULL REFERENCES public.profiles(id),
@@ -69,28 +68,6 @@ CREATE TABLE IF NOT EXISTS public.rtc_rooms (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Game spectators table (track active spectators)
-CREATE TABLE IF NOT EXISTS public.game_spectators (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    game_id UUID NOT NULL REFERENCES public.games(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    joined_at TIMESTAMPTZ DEFAULT NOW(),
-    left_at TIMESTAMPTZ,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    UNIQUE (game_id, user_id)
-);
-
--- Game chat messages table (persisted)
-CREATE TABLE IF NOT EXISTS public.game_chat_messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    game_id UUID NOT NULL REFERENCES public.games(id) ON DELETE CASCADE,
-    sender_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    sender_role TEXT NOT NULL CHECK (sender_role IN ('player', 'spectator')),
-    message TEXT NOT NULL CHECK (char_length(message) <= 2000),
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
-);
-
 -- Moves table
 CREATE TABLE IF NOT EXISTS public.moves (
     id BIGSERIAL PRIMARY KEY,
@@ -135,7 +112,6 @@ CREATE INDEX IF NOT EXISTS idx_games_black_id ON public.games(black_id);
 CREATE INDEX IF NOT EXISTS idx_games_status ON public.games(status);
 CREATE INDEX IF NOT EXISTS idx_games_game_mode ON public.games(game_mode);
 CREATE INDEX IF NOT EXISTS idx_games_created_at ON public.games(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_games_spectate_allowed_started_at ON public.games(spectate_allowed, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_moves_game_id ON public.moves(game_id);
 CREATE INDEX IF NOT EXISTS idx_matchmaking_queue_time_control ON public.matchmaking_queue(time_control);
 CREATE INDEX IF NOT EXISTS idx_invitations_from_user_id_created_at ON public.invitations(from_user_id, created_at DESC);
@@ -146,10 +122,6 @@ CREATE INDEX IF NOT EXISTS idx_ratings_user_id ON public.ratings(user_id);
 CREATE INDEX IF NOT EXISTS idx_rating_history_user_id ON public.rating_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_rating_history_game_id ON public.rating_history(game_id);
 CREATE INDEX IF NOT EXISTS idx_rtc_rooms_game_id ON public.rtc_rooms(game_id);
-CREATE INDEX IF NOT EXISTS idx_game_spectators_game_active ON public.game_spectators(game_id, is_active);
-CREATE INDEX IF NOT EXISTS idx_game_spectators_user_active ON public.game_spectators(user_id, is_active);
-CREATE INDEX IF NOT EXISTS idx_game_chat_messages_game_created_at ON public.game_chat_messages(game_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_game_chat_messages_sender_created_at ON public.game_chat_messages(sender_id, created_at DESC);
 
 -- Row Level Security Policies
 
@@ -162,8 +134,6 @@ ALTER TABLE public.invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rating_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rtc_rooms ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.game_spectators ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.game_chat_messages ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -187,8 +157,7 @@ CREATE POLICY "Games are viewable by participants and finished games are public"
         black_id = auth.uid() OR 
         created_by = auth.uid() OR
         status = 'finished' OR
-        status = 'waiting' OR
-        (status = 'active' AND spectate_allowed = TRUE AND mode = 'pvp')
+        status = 'waiting'
     );
 
 CREATE POLICY "Authenticated users can create games"
@@ -206,12 +175,7 @@ CREATE POLICY "Moves are viewable if game is viewable"
         EXISTS (
             SELECT 1 FROM public.games g
             WHERE g.id = game_id
-            AND (
-                g.white_id = auth.uid() OR
-                g.black_id = auth.uid() OR
-                g.status = 'finished' OR
-                (g.status = 'active' AND g.spectate_allowed = TRUE AND g.mode = 'pvp')
-            )
+            AND (g.white_id = auth.uid() OR g.black_id = auth.uid() OR g.status = 'finished')
         )
     );
 
@@ -276,17 +240,13 @@ CREATE POLICY "Rating history is publicly viewable"
     USING (true);
 
 -- RTC Rooms policies
-CREATE POLICY "RTC rooms are viewable by game participants (and spectators for spectatable games)"
+CREATE POLICY "RTC rooms are viewable by game participants"
     ON public.rtc_rooms FOR SELECT
     USING (
         EXISTS (
             SELECT 1 FROM public.games g
             WHERE g.id = game_id
-            AND (
-                g.white_id = auth.uid() OR
-                g.black_id = auth.uid() OR
-                (g.status = 'active' AND g.spectate_allowed = TRUE AND g.mode = 'pvp')
-            )
+            AND (g.white_id = auth.uid() OR g.black_id = auth.uid())
         )
     );
 
@@ -300,109 +260,6 @@ CREATE POLICY "Game participants can create RTC rooms"
         )
         AND auth.uid() = created_by
     );
-
--- Spectators policies
-CREATE POLICY "Spectators can view for spectatable games or if participant"
-    ON public.game_spectators FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.games g
-            WHERE g.id = game_id
-            AND (
-                g.white_id = auth.uid() OR
-                g.black_id = auth.uid() OR
-                (g.status = 'active' AND g.spectate_allowed = TRUE AND g.mode = 'pvp')
-            )
-        )
-    );
-
-CREATE POLICY "Spectators can insert themselves for spectatable active games"
-    ON public.game_spectators FOR INSERT
-    WITH CHECK (
-        auth.uid() = user_id AND
-        EXISTS (
-            SELECT 1 FROM public.games g
-            WHERE g.id = game_id
-              AND g.status = 'active'
-              AND g.spectate_allowed = TRUE
-              AND g.mode = 'pvp'
-        )
-    );
-
-CREATE POLICY "Spectators can update their own spectator row"
-    ON public.game_spectators FOR UPDATE
-    USING (auth.uid() = user_id)
-    WITH CHECK (auth.uid() = user_id);
-
--- Chat policies
-CREATE POLICY "Chat messages viewable by participants or active spectators"
-    ON public.game_chat_messages FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.games g
-            WHERE g.id = game_id
-              AND (g.white_id = auth.uid() OR g.black_id = auth.uid())
-        )
-        OR EXISTS (
-            SELECT 1 FROM public.game_spectators s
-            WHERE s.game_id = game_id
-              AND s.user_id = auth.uid()
-              AND s.is_active = TRUE
-        )
-    );
-
-CREATE POLICY "Chat messages insertable by participants or active spectators"
-    ON public.game_chat_messages FOR INSERT
-    WITH CHECK (
-        sender_id = auth.uid()
-        AND (
-            EXISTS (
-                SELECT 1 FROM public.games g
-                WHERE g.id = game_id
-                  AND (g.white_id = auth.uid() OR g.black_id = auth.uid())
-            )
-            OR EXISTS (
-                SELECT 1 FROM public.game_spectators s
-                WHERE s.game_id = game_id
-                  AND s.user_id = auth.uid()
-                  AND s.is_active = TRUE
-            )
-        )
-    );
-
-CREATE POLICY "Chat message sender can soft-delete their message"
-    ON public.game_chat_messages FOR UPDATE
-    USING (sender_id = auth.uid())
-    WITH CHECK (sender_id = auth.uid());
-
--- Ongoing games view (spectate entry point)
--- IMPORTANT: security_invoker ensures the view runs with the querying user's permissions (RLS-safe for PostgREST).
-CREATE OR REPLACE VIEW public.ongoing_games_view
-WITH (security_invoker = true)
-AS
-SELECT
-    g.id,
-    g.game_mode,
-    g.status,
-    g.started_at,
-    g.created_at,
-    g.time_control,
-    g.white_id,
-    g.black_id,
-    w.username AS white_username,
-    w.display_name AS white_display_name,
-    b.username AS black_username,
-    b.display_name AS black_display_name,
-    (SELECT COUNT(*)::int FROM public.moves m WHERE m.game_id = g.id) AS move_count,
-    (SELECT COUNT(*)::int FROM public.game_spectators s WHERE s.game_id = g.id AND s.is_active = TRUE) AS spectator_count
-FROM public.games g
-LEFT JOIN public.profiles w ON w.id = g.white_id
-LEFT JOIN public.profiles b ON b.id = g.black_id
-WHERE g.status = 'active'
-  AND g.mode = 'pvp'
-  AND g.spectate_allowed = TRUE;
-
-GRANT SELECT ON public.ongoing_games_view TO anon, authenticated;
 
 -- Function to create profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

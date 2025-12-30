@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { ensureProfileExists } from '@/lib/supabase/ensureProfile';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { TimeControl } from '@/types/chess';
 
 interface EnqueueBody {
@@ -10,6 +11,7 @@ interface EnqueueBody {
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
+    let admin: ReturnType<typeof createAdminClient> | null = null;
     
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -23,14 +25,24 @@ export async function POST(request: NextRequest) {
     const body: EnqueueBody = await request.json();
     const { timeControl } = body;
 
+    try {
+      admin = createAdminClient();
+    } catch (e) {
+      console.error('Missing/invalid Supabase admin config:', e);
+      return NextResponse.json(
+        { error: 'Matchmaking server is misconfigured (missing SUPABASE_SERVICE_ROLE_KEY)' },
+        { status: 500 }
+      );
+    }
+
     // Remove any existing queue entry for this user
-    await supabase
+    await admin
       .from('matchmaking_queue')
       .delete()
       .eq('user_id', user.id);
 
     // Check for a match
-    const { data: waitingPlayers, error: fetchError } = await supabase
+    const { data: waitingPlayers, error: fetchError } = await admin
       .from('matchmaking_queue')
       .select('*')
       .eq('time_control->>baseMs', timeControl.baseMs.toString())
@@ -41,13 +53,14 @@ export async function POST(request: NextRequest) {
 
     if (fetchError) {
       console.error('Fetch queue error:', fetchError);
+      return NextResponse.json({ error: 'Failed to search queue' }, { status: 500 });
     }
 
     if (waitingPlayers && waitingPlayers.length > 0) {
       const opponent = waitingPlayers[0];
       
       // Remove opponent from queue
-      await supabase
+      await admin
         .from('matchmaking_queue')
         .delete()
         .eq('id', opponent.id);
@@ -87,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // No match found, add to queue
-    const { error: insertError } = await supabase
+    const { error: insertError } = await admin
       .from('matchmaking_queue')
       .insert({
         user_id: user.id,

@@ -57,9 +57,9 @@ A modern, open-source chess platform built with Next.js. Play against bots, frie
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+   # Server-only (required for matchmaking queue reads; do NOT expose to client)
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
    ```
-   Note: `SUPABASE_SERVICE_ROLE_KEY` is required for server-side gated WebRTC signaling (/api/rtc/signal). Keep it secret (never expose it to the browser).
 
 5. **Set up Stockfish (optional but recommended)**
    
@@ -130,6 +130,7 @@ See `supabase/schema.sql` for the complete schema with RLS policies.
 3. Add environment variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; required for matchmaking)
 4. Deploy!
 
 ### Self-hosted

@@ -83,6 +83,8 @@ This guide covers deploying OpenChess to production using Vercel and Supabase (b
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJ...
+   # Server-only (required for matchmaking queue reads; do NOT expose to client)
+   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJ... (service role)
    ```
 3. Make sure they're enabled for Production, Preview, and Development
 
