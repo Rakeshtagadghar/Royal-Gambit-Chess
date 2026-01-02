@@ -12,9 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { Profile, Rating, RatingMode } from '@/types/chess';
-import { 
-  User, 
-  Trophy, 
+import {
+  User,
+  Trophy,
   Calendar,
   Gamepad2,
   TrendingUp,
@@ -38,7 +38,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const username = params.username as string;
   const { user, profile: currentUserProfile } = useAuth();
-  
+
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [ratings, setRatings] = useState<Rating[]>([]);
@@ -56,7 +56,7 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
       try {
         const supabase = getSupabaseClient();
-        
+
         // Fetch profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -65,7 +65,7 @@ export default function ProfilePage() {
           .single();
 
         if (profileError) throw profileError;
-        
+
         // Map database snake_case to camelCase
         setProfile({
           id: profileData.id,
@@ -93,10 +93,10 @@ export default function ProfilePage() {
             updatedAt: r.updated_at as string,
           }));
           setRatings(transformedRatings);
-          
+
           // Calculate total stats from ratings
           const totalStats = transformedRatings.reduce(
-            (acc, r) => ({
+            (acc: { gamesPlayed: number; wins: number; losses: number; draws: number }, r: Rating) => ({
               gamesPlayed: acc.gamesPlayed + r.gamesPlayed,
               wins: acc.wins + r.wins,
               losses: acc.losses + r.losses,
@@ -104,8 +104,8 @@ export default function ProfilePage() {
             }),
             { gamesPlayed: 0, wins: 0, losses: 0, draws: 0 }
           );
-          const winRate = totalStats.gamesPlayed > 0 
-            ? Math.round((totalStats.wins / totalStats.gamesPlayed) * 100) 
+          const winRate = totalStats.gamesPlayed > 0
+            ? Math.round((totalStats.wins / totalStats.gamesPlayed) * 100)
             : 0;
           setStats({ ...totalStats, winRate });
         } else {
@@ -128,10 +128,10 @@ export default function ProfilePage() {
                 losses++;
               }
             });
-            
+
             const gamesPlayed = wins + losses + draws;
             const winRate = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
-            
+
             setStats({ gamesPlayed, wins, losses, draws, winRate });
           }
         }
@@ -170,7 +170,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -186,7 +186,7 @@ export default function ProfilePage() {
                     {profile.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                
+
                 <div className="text-center sm:text-left flex-1">
                   <h1 className="text-3xl font-bold">
                     {profile.displayName || profile.username}
@@ -195,9 +195,9 @@ export default function ProfilePage() {
                   {profile.createdAt && (
                     <div className="flex items-center gap-2 justify-center sm:justify-start mt-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      Joined {new Date(profile.createdAt).toLocaleDateString('en-US', { 
-                        month: 'long', 
-                        year: 'numeric' 
+                      Joined {new Date(profile.createdAt).toLocaleDateString('en-US', {
+                        month: 'long',
+                        year: 'numeric'
                       })}
                     </div>
                   )}
@@ -282,7 +282,7 @@ export default function ProfilePage() {
               <TabsTrigger value="recent">Recent Games</TabsTrigger>
               <TabsTrigger value="stats">Statistics</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="recent" className="mt-4">
               <Card>
                 <CardHeader>

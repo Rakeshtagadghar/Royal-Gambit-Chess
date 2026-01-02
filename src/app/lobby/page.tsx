@@ -184,7 +184,7 @@ function LobbyContent() {
           table: 'games',
           filter: `white_id=eq.${user.id}`,
         },
-        (payload) => {
+        (payload: any) => {
           const row = payload.new as any;
           if (row?.status !== 'active') return;
           if (!matchesSelectedTimeControl(row?.time_control)) return;
@@ -204,7 +204,7 @@ function LobbyContent() {
           table: 'games',
           filter: `black_id=eq.${user.id}`,
         },
-        (payload) => {
+        (payload: any) => {
           const row = payload.new as any;
           if (row?.status !== 'active') return;
           if (!matchesSelectedTimeControl(row?.time_control)) return;
