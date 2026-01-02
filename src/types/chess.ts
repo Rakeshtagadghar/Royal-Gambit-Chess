@@ -4,12 +4,12 @@ export type GameMode = 'bot' | 'pvp';
 export type RatingMode = 'bullet' | 'blitz' | 'rapid' | 'classical';
 export type GameStatus = 'waiting' | 'active' | 'finished' | 'aborted';
 export type GameResult = '1-0' | '0-1' | '1/2-1/2' | '*';
-export type GameTermination = 
-  | 'checkmate' 
-  | 'resign' 
-  | 'timeout' 
-  | 'stalemate' 
-  | 'draw_agreement' 
+export type GameTermination =
+  | 'checkmate'
+  | 'resign'
+  | 'timeout'
+  | 'stalemate'
+  | 'draw_agreement'
   | 'insufficient_material'
   | 'threefold_repetition'
   | 'fifty_move_rule'
@@ -56,7 +56,7 @@ export interface LeaderboardEntry {
 export function getRatingModeFromTimeControl(timeControl: TimeControl): RatingMode {
   const totalTimeSeconds = timeControl.baseMs / 1000;
   const estimatedGameTime = totalTimeSeconds + (40 * timeControl.incrementMs / 1000); // Assuming ~40 moves
-  
+
   if (estimatedGameTime < 180) return 'bullet';       // < 3 minutes
   if (estimatedGameTime < 600) return 'blitz';        // 3-10 minutes
   if (estimatedGameTime < 1800) return 'rapid';       // 10-30 minutes
@@ -156,6 +156,10 @@ export interface Profile {
   username: string;
   displayName?: string;
   avatarUrl?: string;
+  bio?: string;
+  countryCode?: string;
+  isProfilePublic?: boolean;
+  isActivityPublic?: boolean;
   createdAt: string;
   stats?: {
     gamesPlayed: number;

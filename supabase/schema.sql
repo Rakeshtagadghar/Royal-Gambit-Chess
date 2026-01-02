@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     username TEXT UNIQUE NOT NULL,
     display_name TEXT,
     avatar_url TEXT,
+    bio TEXT,
+    country_code TEXT,
+    is_profile_public BOOLEAN DEFAULT TRUE,
+    is_activity_public BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -44,6 +48,7 @@ CREATE TABLE IF NOT EXISTS public.ratings (
     wins INTEGER NOT NULL DEFAULT 0,
     losses INTEGER NOT NULL DEFAULT 0,
     draws INTEGER NOT NULL DEFAULT 0,
+    peak_elo INTEGER,
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (user_id, mode)
 );
@@ -138,7 +143,7 @@ ALTER TABLE public.rtc_rooms ENABLE ROW LEVEL SECURITY;
 -- Profiles policies
 CREATE POLICY "Public profiles are viewable by everyone"
     ON public.profiles FOR SELECT
-    USING (true);
+    USING (is_profile_public = true OR auth.uid() = id);
 
 CREATE POLICY "Users can update their own profile"
     ON public.profiles FOR UPDATE
@@ -591,4 +596,56 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Grant execute permissions
 GRANT EXECUTE ON FUNCTION public.initialize_user_ratings(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.process_game_ratings(UUID) TO authenticated;
+
+-- Views for Profile Page
+CREATE OR REPLACE VIEW public.match_results
+WITH (security_invoker = true)
+AS
+SELECT
+    g.id,
+    g.id as game_id,
+    g.white_id as player_white,
+    g.black_id as player_black,
+    CASE
+        WHEN g.result = '1-0' THEN g.white_id
+        WHEN g.result = '0-1' THEN g.black_id
+        ELSE NULL
+    END as winner_user_id,
+    CASE
+        WHEN g.result = '1-0' THEN 'white'
+        WHEN g.result = '0-1' THEN 'black'
+        WHEN g.result = '1/2-1/2' THEN 'draw'
+        WHEN g.status = 'aborted' THEN 'aborted'
+        ELSE 'unknown'
+    END as result,
+    g.game_mode as mode,
+    g.ended_at
+FROM public.games g
+WHERE g.status IN ('finished', 'aborted');
+
+CREATE OR REPLACE VIEW public.v_profile_summary
+WITH (security_invoker = true)
+AS
+SELECT
+    p.id,
+    p.username,
+    p.display_name,
+    p.avatar_url,
+    p.bio,
+    p.country_code,
+    p.is_profile_public,
+    p.is_activity_public,
+    p.created_at,
+    COALESCE(sum(r.games_played), 0) as total_games,
+    CASE 
+        WHEN sum(r.games_played) > 0 THEN CAST(sum(r.wins) AS FLOAT) / sum(r.games_played)
+        ELSE 0
+    END as win_rate
+FROM public.profiles p
+LEFT JOIN public.ratings r ON p.id = r.user_id
+GROUP BY p.id;
+
+GRANT SELECT ON public.match_results TO authenticated, anon;
+GRANT SELECT ON public.v_profile_summary TO authenticated, anon;
+
 

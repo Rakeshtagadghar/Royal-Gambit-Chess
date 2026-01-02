@@ -13,6 +13,10 @@ function mapDbProfileToProfile(dbProfile: Record<string, unknown>): Profile {
     username: dbProfile.username as string,
     displayName: dbProfile.display_name as string | undefined,
     avatarUrl: dbProfile.avatar_url as string | undefined,
+    bio: dbProfile.bio as string | undefined,
+    countryCode: dbProfile.country_code as string | undefined,
+    isProfilePublic: dbProfile.is_profile_public as boolean | undefined,
+    isActivityPublic: dbProfile.is_activity_public as boolean | undefined,
     createdAt: dbProfile.created_at as string,
   };
 }
@@ -100,7 +104,7 @@ export function useAuth() {
 
   useEffect(() => {
     const supabase = getSupabaseClient();
-    
+
     // Get initial session
     const initAuth = async () => {
       try {
@@ -161,13 +165,13 @@ export function useAuth() {
   const signIn = async (email: string, password: string) => {
     const supabase = getSupabaseClient();
     setIsLoading(true);
-    
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      
+
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
@@ -180,7 +184,7 @@ export function useAuth() {
   const signUp = async (email: string, password: string, username: string) => {
     const supabase = getSupabaseClient();
     setIsLoading(true);
-    
+
     try {
       // Check if username is taken
       const { data: existingUser } = await supabase
@@ -188,7 +192,7 @@ export function useAuth() {
         .select('username')
         .eq('username', username)
         .single();
-      
+
       if (existingUser) {
         throw new Error('Username is already taken');
       }
@@ -200,7 +204,7 @@ export function useAuth() {
           data: { username },
         },
       });
-      
+
       if (error) throw error;
 
       // Create profile
@@ -212,7 +216,7 @@ export function useAuth() {
           created_at: new Date().toISOString(),
         });
       }
-      
+
       return { data, error: null };
     } catch (error) {
       return { data: null, error: error as Error };
@@ -224,29 +228,29 @@ export function useAuth() {
   const signOut = async () => {
     const supabase = getSupabaseClient();
     console.log('🔵 Starting signOut');
-    
+
     try {
       // Add timeout to prevent hanging
       const signOutPromise = supabase.auth.signOut({ scope: 'local' });
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('SignOut timeout')), 3000)
       );
-      
+
       await Promise.race([signOutPromise, timeoutPromise]);
       console.log('🔵 Supabase signOut success');
     } catch (error) {
       console.warn('⚠️ SignOut issue (continuing anyway):', error);
     }
-    
+
     // Always clear local state
     reset();
-    
+
     // Clear localStorage
     const projectId = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0];
     if (projectId) {
       localStorage.removeItem(`sb-${projectId}-auth-token`);
     }
-    
+
     // Clear all Supabase cookies
     const cookies = document.cookie.split(';');
     for (const cookie of cookies) {
@@ -256,14 +260,14 @@ export function useAuth() {
         document.cookie = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
       }
     }
-    
+
     console.log('🔵 Cleared cookies and localStorage, redirecting...');
     window.location.href = '/';
   };
 
   const signInWithGoogle = async () => {
     const supabase = getSupabaseClient();
-    
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -271,7 +275,7 @@ export function useAuth() {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
-      
+
       if (error) throw error;
     } catch (error) {
       console.error('Google sign in error:', error);
@@ -288,6 +292,7 @@ export function useAuth() {
     signUp,
     signOut,
     signInWithGoogle,
+    setProfile,
   };
 }
 

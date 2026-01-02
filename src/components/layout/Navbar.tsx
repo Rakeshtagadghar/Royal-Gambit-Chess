@@ -115,7 +115,7 @@ export function Navbar() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href={profile?.username ? `/profile/${profile.username}` : '/settings'}>
+                    <Link href={profile?.username ? `/u/${profile.username}` : '/settings/profile'}>
                       <User className="mr-2 h-4 w-4" />
                       Profile
                     </Link>
@@ -127,7 +127,7 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onSelect={(e) => {
                       e.preventDefault();
                       signOut();

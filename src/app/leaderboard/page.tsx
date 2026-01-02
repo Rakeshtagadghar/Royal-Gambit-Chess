@@ -10,8 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { LeaderboardEntry, RatingMode } from '@/types/chess';
-import { 
-  Trophy, 
+import {
+  Trophy,
   Medal,
   Flame,
   Zap,
@@ -59,10 +59,10 @@ export default function LeaderboardPage() {
       try {
         const response = await fetch(apiUrls.leaderboard.get({ mode: activeMode, limit: 100 }));
         if (!response.ok) throw new Error('Failed to fetch leaderboard');
-        
+
         const data = await response.json();
         setLeaderboard(data.leaderboard || []);
-        
+
         // Find user's rank if logged in
         if (user) {
           const userEntry = data.leaderboard?.find(
@@ -86,7 +86,7 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -175,7 +175,7 @@ export default function LeaderboardPage() {
                     <div className="col-span-2 text-right hidden sm:block">W/L/D</div>
                     <div className="col-span-2 text-right">Games</div>
                   </div>
-                  
+
                   {/* Rows */}
                   <AnimatePresence>
                     {leaderboard.map((entry, index) => (
@@ -184,7 +184,7 @@ export default function LeaderboardPage() {
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.03 }}
-                        onClick={() => router.push(`/profile/${entry.username}`)}
+                        onClick={() => router.push(`/u/${entry.username}`)}
                         className={cn(
                           'grid grid-cols-12 gap-4 px-4 py-3 rounded-lg cursor-pointer transition-colors border border-transparent',
                           getRankBgClass(entry.rank),
