@@ -105,16 +105,30 @@ export function CookieConsent() {
 
 // Hook to check consent status
 export function useCookieConsent() {
-  const [consent, setConsent] = useState<ConsentType>(null);
+  const getStoredConsent = () => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType;
+  };
+
+  const [consent, setConsent] = useState<ConsentType>(getStoredConsent);
+  const [isLoaded] = useState(() => typeof window !== "undefined");
 
   useEffect(() => {
-    const storedConsent = localStorage.getItem(COOKIE_CONSENT_KEY);
-    setConsent(storedConsent as ConsentType);
+    // Listen for consent changes from other components/tabs
+    const handleStorageChange = () => {
+      setConsent(localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType);
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
   return {
     consent,
-    hasAnalyticsConsent: consent === "all",
+    isLoaded,
+    hasAnalyticsConsent: consent === "all" || consent === "essential",
     hasEssentialConsent: consent !== null,
   };
 }
+
+export const COOKIE_CONSENT_KEY_EXPORT = COOKIE_CONSENT_KEY;
