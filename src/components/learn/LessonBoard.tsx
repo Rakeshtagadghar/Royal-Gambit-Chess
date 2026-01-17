@@ -123,11 +123,12 @@ export function LessonBoard({ interactive = true, showCoordinates = true }: Less
   );
 
   // Convert arrows to react-chessboard format
-  const customArrows = useMemo(() => {
-    return arrows.map((arrow: StepArrow) => {
-      const color = arrow.color || 'rgba(0, 128, 0, 0.7)';
-      return [arrow.from, arrow.to, color] as [string, string, string];
-    });
+  const boardArrows = useMemo(() => {
+    return arrows.map((arrow: StepArrow) => ({
+      startSquare: arrow.from,
+      endSquare: arrow.to,
+      color: arrow.color || 'rgba(0, 128, 0, 0.7)',
+    }));
   }, [arrows]);
 
   // Custom square styles
@@ -211,7 +212,7 @@ export function LessonBoard({ interactive = true, showCoordinates = true }: Less
             showAnimations: enableAnimations,
             allowDragging: interactive && !stepCompleted,
             showNotation: showCoordinates,
-            customArrows: customArrows,
+            arrows: boardArrows,
             onPieceDrag: ({ square }) => {
               if (square && interactive && !stepCompleted) selectSquare(square as Square);
             },

@@ -68,7 +68,7 @@ function ModelLinePlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const step = steps[currentStepIndex];
-  const solutionLine = step?.meta?.solution_line_uci_example || [];
+  const solutionLine = step?.solutionLineUci || [];
 
   const playNextMove = useCallback(() => {
     if (moveIndex >= solutionLine.length) {
@@ -97,7 +97,7 @@ function ModelLinePlayer() {
       const { game } = useLearnStore.getState();
       const currentMoveIndex = useLearnStore.getState().currentStepIndex;
       const currentStep = useLearnStore.getState().steps[currentMoveIndex];
-      const line = currentStep?.meta?.solution_line_uci_example || [];
+      const line = currentStep?.solutionLineUci || [];
 
       setMoveIndex((prevIndex) => {
         if (prevIndex >= line.length) {

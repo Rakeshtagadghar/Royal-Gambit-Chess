@@ -35,12 +35,6 @@ export function CookieConsent() {
     localStorage.setItem(COOKIE_CONSENT_KEY, "essential");
     setConsent("essential");
     setShowBanner(false);
-    // Disable Google Analytics if only essential cookies accepted
-    if (typeof window !== "undefined") {
-      (window as Window & { ["ga-disable-" + string]: boolean })[
-        `ga-disable-${process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID}`
-      ] = true;
-    }
   };
 
   return (
