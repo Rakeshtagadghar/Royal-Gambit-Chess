@@ -409,6 +409,9 @@ export default function HomePage() {
               <Link href="/learn" className="hover:text-foreground transition-colors">Learn</Link>
               <Link href="/play" className="hover:text-foreground transition-colors">Play</Link>
               <Link href="/leaderboard" className="hover:text-foreground transition-colors">Leaderboard</Link>
+              <span className="text-muted-foreground/50">|</span>
+              <Link href="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link href="/cookie-policy" className="hover:text-foreground transition-colors">Cookie Policy</Link>
             </div>
           </div>
         </div>
