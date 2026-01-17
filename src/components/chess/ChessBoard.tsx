@@ -300,7 +300,7 @@ export function ChessBoard({ onMove, interactive = true }: ChessBoardProps) {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="bg-card text-card-foreground p-6 rounded-lg shadow-xl text-center"
+              className="bg-card text-card-foreground p-6 py-0 rounded-lg shadow-xl text-center"
             >
               <GameOverMessage />
             </motion.div>

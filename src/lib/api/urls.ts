@@ -52,6 +52,28 @@ export const ratingsApi = {
   getUser: (userId: string) => `${API_BASE}/ratings/${userId}`,
 } as const;
 
+// Learn API
+export const learnApi = {
+  // Tracks
+  tracks: () => `${API_BASE}/learn/tracks`,
+  track: (trackSlug: string) => `${API_BASE}/learn/tracks/${encodeURIComponent(trackSlug)}`,
+
+  // Lessons
+  lesson: (lessonSlug: string) => `${API_BASE}/learn/lessons/${encodeURIComponent(lessonSlug)}`,
+
+  // Practice
+  practicePacks: () => `${API_BASE}/learn/practice`,
+  practicePack: (packSlug: string) => `${API_BASE}/learn/practice/${encodeURIComponent(packSlug)}`,
+
+  // Progress
+  progress: () => `${API_BASE}/learn/progress`,
+  saveProgress: () => `${API_BASE}/learn/progress/lesson`,
+  savePuzzleResult: () => `${API_BASE}/learn/progress/puzzle`,
+
+  // Recommendations
+  recommended: () => `${API_BASE}/learn/recommended`,
+} as const;
+
 // Export all APIs as a single object for convenience
 export const apiUrls = {
   games: gamesApi,
@@ -59,5 +81,6 @@ export const apiUrls = {
   invitations: invitationsApi,
   leaderboard: leaderboardApi,
   ratings: ratingsApi,
+  learn: learnApi,
 } as const;
 

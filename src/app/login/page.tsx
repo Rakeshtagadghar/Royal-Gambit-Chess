@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Loader2, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { executeRecaptcha, RecaptchaActions } from '@/lib/recaptcha';
 
 function LoginContent() {
   const searchParams = useSearchParams();
@@ -35,9 +36,15 @@ function LoginContent() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
+    // Execute reCAPTCHA
+    const recaptchaToken = await executeRecaptcha(RecaptchaActions.LOGIN);
+    if (!recaptchaToken) {
+      console.warn('reCAPTCHA verification skipped');
+    }
+
     const { error } = await signIn(email, password);
-    
+
     if (error) {
       toast.error('Sign in failed', { description: error.message });
     } else {
@@ -50,25 +57,32 @@ function LoginContent() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast.error('Passwords do not match');
       return;
     }
-    
+
     if (password.length < 6) {
       toast.error('Password must be at least 6 characters');
       return;
     }
-    
+
     if (username.length < 3) {
       toast.error('Username must be at least 3 characters');
       return;
     }
 
     setIsSubmitting(true);
+
+    // Execute reCAPTCHA
+    const recaptchaToken = await executeRecaptcha(RecaptchaActions.SIGNUP);
+    if (!recaptchaToken) {
+      console.warn('reCAPTCHA verification skipped');
+    }
+
     const { error } = await signUp(email, password, username);
-    
+
     if (error) {
       toast.error('Sign up failed', { description: error.message });
     } else {

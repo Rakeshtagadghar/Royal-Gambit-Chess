@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { PieceSymbol, Color } from 'chess.js';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface PromotionModalProps {
   isOpen: boolean;
@@ -37,10 +37,10 @@ export function PromotionModal({ isOpen, color, onSelect, onCancel }: PromotionM
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-md">
-        <div className="text-center mb-4">
-          <h2 className="text-xl font-semibold">Choose Promotion</h2>
-          <p className="text-muted-foreground text-sm">Select a piece to promote your pawn</p>
-        </div>
+        <DialogHeader className="text-center mb-4">
+          <DialogTitle className="text-xl">Choose Promotion</DialogTitle>
+          <DialogDescription>Select a piece to promote your pawn</DialogDescription>
+        </DialogHeader>
         <div className="grid grid-cols-4 gap-2">
           <AnimatePresence>
             {PROMOTION_PIECES.map((piece, index) => (

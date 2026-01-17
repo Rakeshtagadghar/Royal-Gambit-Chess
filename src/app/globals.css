@@ -151,6 +151,15 @@
   }
 }
 
+@keyframes piece-to-move-pulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 3px rgba(59, 130, 246, 0.6), 0 0 8px rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: inset 0 0 0 5px rgba(59, 130, 246, 0.8), 0 0 16px rgba(59, 130, 246, 0.6);
+  }
+}
+
 @keyframes capture-flash {
   0% {
     background-color: var(--highlight-check);
@@ -171,6 +180,10 @@
 
 .animate-capture-flash {
   animation: capture-flash 0.3s ease-out;
+}
+
+.animate-piece-to-move {
+  animation: piece-to-move-pulse 1.5s ease-in-out infinite;
 }
 
 /* Custom scrollbar */

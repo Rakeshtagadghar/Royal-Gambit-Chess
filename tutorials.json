@@ -1,0 +1,552 @@
+{
+  "spec_name": "Chess Tutorials Section (Beginner → Expert) v1",
+  "spec_version": "1.0.0",
+  "goal": "Add a dedicated Tutorials section that takes a user from complete beginner to advanced/expert concepts using structured learning paths, interactive lessons on a chessboard, quizzes, puzzles, and progress tracking.",
+  "scope": {
+    "in_scope": [
+      "Tutorial hub with learning tracks (Beginner/Intermediate/Advanced/Expert)",
+      "Lesson player with interactive board + guided steps",
+      "Quizzes and checkpoints",
+      "Puzzle practice tied to lessons",
+      "Progress tracking, streaks, achievements",
+      "Search and filters for lessons",
+      "Basic creator/admin workflow to add/edit lessons (minimal CMS)"
+    ],
+    "out_of_scope_v1": [
+      "Live human coaching",
+      "Full video course hosting (YouTube embedding is OK)",
+      "AI-generated custom curriculum (can be v2)",
+      "Complex spaced repetition engine (basic scheduler OK)"
+    ],
+    "assumptions": [
+      "Next.js App Router + Supabase already used",
+      "Existing chessboard component (PvP) can be reused for lesson interactivity",
+      "Existing auth/profile exists"
+    ]
+  },
+  "ux_principles": [
+    "Beginner-first: teach rules and patterns with minimal text + interactive examples",
+    "Small steps: each lesson 3–8 minutes",
+    "Practice-driven: every concept ends with a short puzzle set",
+    "Visible progress: show completion %, next recommended lesson, streak",
+    "Fast feedback: show why a move is right/wrong with arrows/highlights"
+  ],
+  "routes": {
+    "tutorials_hub": "/learn",
+    "track_page": "/learn/track/[trackSlug]",
+    "lesson_player": "/learn/lesson/[lessonSlug]",
+    "puzzle_practice": "/learn/practice/[practiceSlug]",
+    "my_progress": "/learn/progress",
+    "admin_optional": "/admin/learn"
+  },
+  "information_architecture": {
+    "tracks": [
+      {
+        "level": "Beginner",
+        "examples": [
+          "How pieces move",
+          "Check, checkmate, stalemate",
+          "Castling, en passant, promotion",
+          "Simple tactics: fork, pin, skewer",
+          "Mate in 1/2 patterns"
+        ]
+      },
+      {
+        "level": "Intermediate",
+        "examples": [
+          "Opening principles",
+          "Tactical motifs deeper: discovered attack, deflection, decoy",
+          "Basic endgames: K+P vs K, opposition",
+          "Simple positional concepts: weak squares, development"
+        ]
+      },
+      {
+        "level": "Advanced",
+        "examples": [
+          "Calculation technique",
+          "Positional play: outposts, bad bishops, pawn structure",
+          "Endgames: rook endgames basics, Lucena/Philidor intro",
+          "Attack/defense: king safety, initiative"
+        ]
+      },
+      {
+        "level": "Expert",
+        "examples": [
+          "Deep endgames and transitions",
+          "Advanced calculation and candidate moves",
+          "Strategic planning, prophylaxis",
+          "Model games and annotated lines"
+        ]
+      }
+    ],
+    "content_types": [
+      "Lesson (guided interactive)",
+      "Quiz (multiple choice / move selection)",
+      "Practice Pack (puzzles)",
+      "Model Game (annotated replay)",
+      "Reference (rules glossary)"
+    ]
+  },
+  "lesson_player_requirements": {
+    "core_features": [
+      "Interactive board with guided steps (highlight squares, arrows, text prompts)",
+      "Move validation: accept only correct moves when required (branching optional)",
+      "Show hints (1–3 levels): 'Look for a check', 'Look for a fork', 'Show candidate squares'",
+      "Show explanation after answer (why correct/why wrong)",
+      "Allow 'Try again' and 'Reveal solution'",
+      "Progress saved per step (resume where left off)"
+    ],
+    "board_ui": {
+      "must_have": [
+        "Highlight legal moves (optional toggle)",
+        "Arrow overlays for explanations",
+        "Last move + check indicator",
+        "Flip board option",
+        "Promotion support"
+      ],
+      "feedback": [
+        "Correct move animation + short success message",
+        "Wrong move shake + revert + explanation"
+      ]
+    },
+    "lesson_completion_logic": {
+      "completion": "Mark lesson complete when all required steps + checkpoint quiz passed",
+      "grading": "Store attempts, hints used, time spent",
+      "unlocking": "Lock advanced lessons until prerequisites are complete (configurable)"
+    }
+  },
+  "tutorials_hub_ui": {
+    "sections": [
+      {
+        "name": "Recommended Next",
+        "logic": "Next unfinished lesson in current track; fallback to placement suggestion"
+      },
+      {
+        "name": "Tracks",
+        "cards": ["Beginner", "Intermediate", "Advanced", "Expert"],
+        "card_fields": [
+          "Track title",
+          "Completion %",
+          "Estimated time",
+          "Primary skills covered"
+        ]
+      },
+      {
+        "name": "Practice",
+        "items": [
+          "Daily tactics (optional)",
+          "Lesson-based practice packs",
+          "Mate patterns packs"
+        ]
+      },
+      {
+        "name": "Search & Filters",
+        "filters": [
+          "Level",
+          "Topic (tactics/openings/endgames/strategy/rules)",
+          "Duration (short/medium/long)",
+          "Format (lesson/quiz/practice/model game)"
+        ]
+      }
+    ]
+  },
+  "progress_and_gamification": {
+    "tracking": [
+      "Lesson completion",
+      "Quiz scores",
+      "Practice accuracy",
+      "Hints used",
+      "Time spent",
+      "Streak days"
+    ],
+    "badges": [
+      "First Lesson Complete",
+      "Fork Finder (10 fork puzzles solved)",
+      "Mate Patterns (20 mates solved)",
+      "Endgame Rookie (complete endgame track)"
+    ],
+    "leaderboard_optional": [
+      "Practice leaderboard (weekly accuracy/volume)",
+      "Streak leaderboard"
+    ]
+  },
+  "data_model_supabase": {
+    "tables": [
+      {
+        "name": "learn_tracks",
+        "purpose": "Top-level learning tracks",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          { "name": "slug", "type": "text", "unique": true },
+          { "name": "title", "type": "text" },
+          {
+            "name": "level",
+            "type": "text",
+            "enum": ["beginner", "intermediate", "advanced", "expert"]
+          },
+          { "name": "description", "type": "text", "nullable": true },
+          { "name": "order_index", "type": "int", "default": 0 },
+          { "name": "is_published", "type": "boolean", "default": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ]
+      },
+      {
+        "name": "learn_lessons",
+        "purpose": "Lessons and their metadata",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          { "name": "track_id", "type": "uuid", "fk": "learn_tracks.id" },
+          { "name": "slug", "type": "text", "unique": true },
+          { "name": "title", "type": "text" },
+          {
+            "name": "topic",
+            "type": "text",
+            "enum": [
+              "rules",
+              "tactics",
+              "openings",
+              "endgames",
+              "strategy",
+              "calculation"
+            ]
+          },
+          {
+            "name": "level",
+            "type": "text",
+            "enum": ["beginner", "intermediate", "advanced", "expert"]
+          },
+          { "name": "estimated_minutes", "type": "int", "default": 5 },
+          { "name": "order_index", "type": "int", "default": 0 },
+          {
+            "name": "prerequisite_lesson_ids",
+            "type": "jsonb",
+            "default": "[]",
+            "notes": "array of lesson UUIDs"
+          },
+          { "name": "cover_image_url", "type": "text", "nullable": true },
+          { "name": "is_published", "type": "boolean", "default": false },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ]
+      },
+      {
+        "name": "learn_lesson_steps",
+        "purpose": "Structured interactive steps for a lesson",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          { "name": "lesson_id", "type": "uuid", "fk": "learn_lessons.id" },
+          { "name": "step_index", "type": "int" },
+          {
+            "name": "type",
+            "type": "text",
+            "enum": ["explain", "move_task", "quiz", "puzzle", "model_line"]
+          },
+          { "name": "title", "type": "text", "nullable": true },
+          { "name": "body_md", "type": "text", "nullable": true },
+          { "name": "initial_fen", "type": "text", "nullable": true },
+          {
+            "name": "required_move_uci",
+            "type": "text",
+            "nullable": true,
+            "notes": "for move_task"
+          },
+          {
+            "name": "allowed_moves_uci",
+            "type": "jsonb",
+            "default": "[]",
+            "notes": "optional"
+          },
+          {
+            "name": "solution_line_uci",
+            "type": "jsonb",
+            "default": "[]",
+            "notes": "for puzzle/model_line"
+          },
+          {
+            "name": "hints",
+            "type": "jsonb",
+            "default": "[]",
+            "notes": "array of hint strings or hint objects"
+          },
+          { "name": "explain_correct_md", "type": "text", "nullable": true },
+          { "name": "explain_wrong_md", "type": "text", "nullable": true },
+          {
+            "name": "meta",
+            "type": "jsonb",
+            "default": "{}",
+            "notes": "arrows, highlights, quiz options, etc."
+          }
+        ],
+        "constraints": ["unique(lesson_id, step_index)"]
+      },
+      {
+        "name": "learn_practice_packs",
+        "purpose": "Curated sets of puzzles for practice",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          { "name": "slug", "type": "text", "unique": true },
+          { "name": "title", "type": "text" },
+          {
+            "name": "level",
+            "type": "text",
+            "enum": ["beginner", "intermediate", "advanced", "expert"]
+          },
+          {
+            "name": "topic",
+            "type": "text",
+            "enum": ["tactics", "endgames", "openings", "mates"]
+          },
+          { "name": "description", "type": "text", "nullable": true },
+          { "name": "is_published", "type": "boolean", "default": false }
+        ]
+      },
+      {
+        "name": "learn_puzzles",
+        "purpose": "Puzzle positions and solutions",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          {
+            "name": "level",
+            "type": "text",
+            "enum": ["beginner", "intermediate", "advanced", "expert"]
+          },
+          {
+            "name": "topic",
+            "type": "text",
+            "enum": [
+              "fork",
+              "pin",
+              "skewer",
+              "mate",
+              "endgame",
+              "deflection",
+              "discovered_attack",
+              "zwischenzug",
+              "other"
+            ]
+          },
+          { "name": "initial_fen", "type": "text" },
+          {
+            "name": "solution_line_uci",
+            "type": "jsonb",
+            "default": "[]",
+            "notes": "main solution line"
+          },
+          { "name": "explanation_md", "type": "text", "nullable": true }
+        ]
+      },
+      {
+        "name": "learn_pack_items",
+        "purpose": "Link puzzles to packs in order",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          {
+            "name": "pack_id",
+            "type": "uuid",
+            "fk": "learn_practice_packs.id"
+          },
+          { "name": "puzzle_id", "type": "uuid", "fk": "learn_puzzles.id" },
+          { "name": "order_index", "type": "int", "default": 0 }
+        ],
+        "constraints": ["unique(pack_id, puzzle_id)"]
+      },
+      {
+        "name": "learn_user_progress",
+        "purpose": "Per-user progress tracking",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          { "name": "user_id", "type": "uuid" },
+          { "name": "lesson_id", "type": "uuid", "fk": "learn_lessons.id" },
+          {
+            "name": "status",
+            "type": "text",
+            "enum": ["not_started", "in_progress", "completed"],
+            "default": "not_started"
+          },
+          { "name": "last_step_index", "type": "int", "default": 0 },
+          { "name": "attempts", "type": "int", "default": 0 },
+          { "name": "hints_used", "type": "int", "default": 0 },
+          { "name": "best_score", "type": "int", "nullable": true },
+          { "name": "updated_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "constraints": ["unique(user_id, lesson_id)"]
+      },
+      {
+        "name": "learn_user_practice_results",
+        "purpose": "Per-user puzzle results for practice",
+        "columns": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "pk": true,
+            "default": "gen_random_uuid()"
+          },
+          { "name": "user_id", "type": "uuid" },
+          { "name": "puzzle_id", "type": "uuid", "fk": "learn_puzzles.id" },
+          { "name": "is_correct", "type": "boolean" },
+          { "name": "attempts", "type": "int", "default": 1 },
+          { "name": "time_ms", "type": "int", "nullable": true },
+          { "name": "created_at", "type": "timestamptz", "default": "now()" }
+        ],
+        "indexes": ["index(user_id, created_at desc)", "index(puzzle_id)"]
+      }
+    ],
+    "rls_policies_high_level": [
+      "learn_tracks/learn_lessons/learn_lesson_steps/learn_practice_packs/learn_puzzles: public SELECT only where is_published=true",
+      "learn_user_progress/learn_user_practice_results: only owner can SELECT/INSERT/UPDATE (auth.uid()=user_id)",
+      "Admin write access via role claim (e.g., profiles.is_admin=true) or separate admin_users table"
+    ]
+  },
+  "content_format_requirements": {
+    "lesson_step_meta_schema": {
+      "highlights": "array of squares (e2, e4, etc.)",
+      "arrows": "array of { from:'e2', to:'e4', color?:string }",
+      "quiz": "optional { question, options:[{id,text}], correctOptionId, explain_md }",
+      "practice": "optional { puzzleIds:[uuid], shuffle:boolean }",
+      "board_prefs": "optional { orientation:'white'|'black', allowLegalHighlights:boolean }"
+    },
+    "supported_media": [
+      "Markdown for text explanations",
+      "Optional embedded YouTube link (for a lesson) stored in learn_lessons.meta (jsonb) - optional v1"
+    ]
+  },
+  "apis_and_queries": {
+    "reads": [
+      {
+        "id": "LEARN-HUB",
+        "query": "SELECT published tracks + progress summary for user (join learn_user_progress)",
+        "returns": [
+          "tracks",
+          "completionPercentByTrack",
+          "recommendedNextLesson"
+        ]
+      },
+      {
+        "id": "LEARN-TRACK",
+        "query": "SELECT lessons for track (published) + user progress",
+        "returns": ["lessonList", "lockedStatus", "completionStatus"]
+      },
+      {
+        "id": "LEARN-LESSON",
+        "query": "SELECT lesson + ordered steps + user progress",
+        "returns": ["lesson", "steps", "progress"]
+      },
+      {
+        "id": "LEARN-PRACTICE",
+        "query": "SELECT practice pack + puzzles (ordered) + user results (optional)",
+        "returns": ["pack", "puzzles", "priorPerformance"]
+      }
+    ],
+    "writes": [
+      {
+        "id": "PROGRESS-UPSERT",
+        "operation": "UPSERT learn_user_progress",
+        "when": ["step complete", "lesson completed", "resume position updated"]
+      },
+      {
+        "id": "PRACTICE-RESULT",
+        "operation": "INSERT learn_user_practice_results",
+        "when": ["puzzle attempted"]
+      }
+    ]
+  },
+  "ui_components": {
+    "core": [
+      "LearnHubPage",
+      "TrackPage",
+      "LessonPlayerPage",
+      "LessonSidebar (steps outline)",
+      "LessonBoard (interactive chessboard reuse)",
+      "HintPanel",
+      "QuizCard",
+      "PracticePackPage",
+      "ProgressDashboard"
+    ],
+    "lesson_player_layout": [
+      "Left: Board",
+      "Right: Step content + hints + actions",
+      "Bottom: Step navigation (Prev/Next), Reset, Reveal"
+    ]
+  },
+  "navigation_updates": {
+    "main_nav": [
+      { "label": "Play", "path": "/play" },
+      { "label": "Learn", "path": "/learn", "new": true },
+      { "label": "Leaderboards", "path": "/leaderboard" },
+      { "label": "Profile", "path": "/settings/profile" }
+    ],
+    "cross_links": [
+      "After each game ends: show CTA 'Learn from your mistakes' -> recommend track based on mistakes (v2) or generic Learn Hub",
+      "From profile: show 'Learning progress' summary"
+    ]
+  },
+  "acceptance_criteria": [
+    "Users can open /learn and see Beginner→Expert tracks and recommended next lesson",
+    "Lesson player enforces correct move steps and gives feedback + hints",
+    "Users can resume lessons where they left off",
+    "Practice packs run puzzles with correctness tracking",
+    "Progress page shows completion per track and recent activity",
+    "All learn content is publicly readable only when published; user progress is private via RLS"
+  ],
+  "phased_delivery": [
+    {
+      "phase": "V1",
+      "includes": [
+        "Learn hub + track pages",
+        "Interactive lesson player with move_task and explain steps",
+        "Practice packs with puzzles",
+        "Progress tracking"
+      ]
+    },
+    {
+      "phase": "V1.1",
+      "includes": [
+        "Model games (annotated replay)",
+        "Quiz-only lessons",
+        "Streak + badges"
+      ]
+    },
+    {
+      "phase": "V2",
+      "includes": [
+        "Personalized recommendations from played games",
+        "Spaced repetition scheduler",
+        "AI-generated explanations and adaptive difficulty"
+      ]
+    }
+  ]
+}

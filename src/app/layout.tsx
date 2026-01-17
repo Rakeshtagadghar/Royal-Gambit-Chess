@@ -4,6 +4,9 @@ import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Toaster } from "@/components/ui/sonner";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { ReCaptcha } from "@/components/recaptcha/ReCaptcha";
+import { CookieConsent } from "@/components/cookies/CookieConsent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,9 +44,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased min-h-screen`}
       >
+        <GoogleAnalytics />
+        <ReCaptcha />
         <Providers>
           {children}
           <Toaster />
+          <CookieConsent />
         </Providers>
       </body>
     </html>

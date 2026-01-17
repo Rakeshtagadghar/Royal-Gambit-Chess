@@ -1,0 +1,1075 @@
+{
+  "spec_name": "Learn Tracks Expansion v1 (Opening Principles, Essential Endgames, Strategic Thinking, Master Class)",
+  "spec_version": "1.0.0",
+  "context": {
+    "current_ui": "Learn page shows track cards with level badge, lessons count, estimated hours, progress %",
+    "current_db_seed": "learn_tracks seeded for intermediate-openings, intermediate-endgames, advanced-strategy, expert-mastery but lessons/steps not yet created for these tracks",
+    "existing_schema": {
+      "tracks": "learn_tracks(slug,title,level,description,order_index,estimated_hours,is_published)",
+      "lessons": "learn_lessons(track_id,slug,title,topic,level,description,estimated_minutes,order_index,prerequisite_lesson_ids,is_published)",
+      "steps": "learn_lesson_steps(lesson_id,step_index,type,title,body_md,initial_fen,required_move_uci,allowed_moves_uci,solution_line_uci,hints,explain_correct_md,explain_wrong_md,meta)"
+    },
+    "lesson_step_types_supported": [
+      "explain",
+      "move_task",
+      "quiz",
+      "puzzle",
+      "model_line"
+    ]
+  },
+  "global_requirements": {
+    "publishing_rules": [
+      "Tracks in UI must show lesson count (published lessons only)",
+      "Estimated hours should roughly match total lesson minutes / 60 (±20%)",
+      "Lessons must have a stable slug used as route /learn/lesson/[lessonSlug]"
+    ],
+    "difficulty_model": {
+      "intermediate": "More guided examples, fewer forced-move tasks, introduce planning concepts",
+      "advanced": "More calculation and decision making, longer puzzles, fewer hints",
+      "expert": "Model games, candidate moves, evaluation, endgame technique, reduced hints"
+    },
+    "board_content_rules": [
+      "Every lesson must include at least 1 interactive element (move_task OR puzzle OR quiz)",
+      "Every track must include at least 1 practice component (puzzle steps OR a linked practice pack)",
+      "All FEN positions must be legal and consistent with required moves",
+      "Use meta.boardPrefs.orientation when black-to-move positions are used"
+    ],
+    "recommended_step_templates": {
+      "intermediate_lesson": [
+        "explain",
+        "explain",
+        "move_task",
+        "explain",
+        "quiz"
+      ],
+      "advanced_lesson": ["explain", "model_line", "puzzle", "puzzle", "quiz"],
+      "expert_lesson": ["explain", "model_line", "puzzle", "model_line", "quiz"]
+    }
+  },
+  "tracks": [
+    {
+      "track_slug": "intermediate-openings",
+      "track_title": "Opening Principles",
+      "level": "intermediate",
+      "target_lesson_count": 6,
+      "target_estimated_hours": 3.0,
+      "track_outcomes": [
+        "Understand opening goals: development, center, king safety",
+        "Know common opening mistakes and how to punish them",
+        "Build a simple opening repertoire framework (not memorization-heavy)",
+        "Learn how to transition into a playable middlegame"
+      ],
+      "lessons": [
+        {
+          "slug": "opening-goals-3-principles",
+          "title": "The 3 Goals of the Opening",
+          "topic": "openings",
+          "level": "intermediate",
+          "description": "Development, center control, king safety — and why they matter.",
+          "estimated_minutes": 25,
+          "order_index": 0,
+          "prerequisite_lesson_ids": [],
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "What the opening is for",
+              "body_md": "Explain: get pieces out, fight for center, prepare castling."
+            },
+            {
+              "type": "model_line",
+              "title": "Good development example",
+              "initial_fen": "startpos",
+              "meta": {
+                "solution_line_uci_example": [
+                  "e2e4",
+                  "e7e5",
+                  "g1f3",
+                  "b8c6",
+                  "f1c4"
+                ]
+              }
+            },
+            {
+              "type": "move_task",
+              "title": "Choose the best developing move",
+              "initial_fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+              "required_move_uci": "g1f3",
+              "hints": [
+                "Develop a knight toward the center",
+                "Prefer Nf3 over random pawn pushes"
+              ],
+              "meta": { "pieceToMove": "g1" }
+            },
+            {
+              "type": "explain",
+              "title": "Common traps: ignoring king safety",
+              "body_md": "Explain: early queen adventures and neglecting castling."
+            },
+            {
+              "type": "quiz",
+              "title": "Quick check",
+              "meta": {
+                "quiz": {
+                  "question": "Which is NOT a main opening goal?",
+                  "options": [
+                    { "id": "a", "text": "Develop pieces quickly" },
+                    { "id": "b", "text": "Control the center" },
+                    { "id": "c", "text": "Move the queen out early" },
+                    { "id": "d", "text": "Make the king safe" }
+                  ],
+                  "correctOptionId": "c",
+                  "explainMd": "Early queen moves often lose tempo and invite attacks."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "developing-pieces-efficiently",
+          "title": "Development: Don’t Waste Tempos",
+          "topic": "openings",
+          "level": "intermediate",
+          "description": "How to develop pieces efficiently and avoid repeated moves.",
+          "estimated_minutes": 30,
+          "order_index": 1,
+          "prerequisite_lesson_ids": [],
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Tempo explained",
+              "body_md": "A tempo is a move. Re-moving the same piece wastes time."
+            },
+            {
+              "type": "puzzle",
+              "title": "Punish wasted queen moves",
+              "initial_fen": "rnbqkbnr/pppp1ppp/8/4p3/3PQ3/8/PPP2PPP/RNB1KBNR b KQkq - 0 2",
+              "solution_line_uci": ["b8c6"],
+              "hints": [
+                "Develop with tempo",
+                "Attack the queen while developing"
+              ],
+              "explain_correct_md": "Nc6 develops a piece and gains tempo by attacking the queen."
+            },
+            {
+              "type": "move_task",
+              "title": "Develop with tempo",
+              "initial_fen": "r1bqkbnr/pppp1ppp/2n5/4p3/3PQ3/8/PPP2PPP/RNB1KBNR w KQkq - 1 3",
+              "required_move_uci": "f1c4",
+              "hints": ["Develop the bishop to an active square", "Aim at f7"],
+              "meta": { "pieceToMove": "f1" }
+            },
+            {
+              "type": "quiz",
+              "title": "Tempo quiz",
+              "meta": {
+                "quiz": {
+                  "question": "Which move usually wastes tempo in the opening?",
+                  "options": [
+                    { "id": "a", "text": "Developing a knight" },
+                    { "id": "b", "text": "Castling" },
+                    {
+                      "id": "c",
+                      "text": "Moving the same piece twice without reason"
+                    },
+                    { "id": "d", "text": "Controlling the center" }
+                  ],
+                  "correctOptionId": "c",
+                  "explainMd": "Repeated moves without purpose fall behind in development."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "center-control-e4-d4",
+          "title": "Center Control: e4/d4 & Counterplay",
+          "topic": "openings",
+          "level": "intermediate",
+          "description": "Why the center matters and how to attack/undermine it.",
+          "estimated_minutes": 30,
+          "order_index": 2,
+          "prerequisite_lesson_ids": [],
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "The center squares",
+              "body_md": "Explain: e4, d4, e5, d5; space and mobility."
+            },
+            {
+              "type": "model_line",
+              "title": "Undermining the center",
+              "initial_fen": "rnbqkbnr/pppp1ppp/8/4p3/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 2",
+              "meta": { "solution_line_uci_example": ["d7d5"] }
+            },
+            {
+              "type": "move_task",
+              "title": "Challenge the center",
+              "initial_fen": "rnbqkbnr/pppp1ppp/8/4p3/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 2",
+              "required_move_uci": "d7d5",
+              "hints": ["Strike at d4/e4", "Central pawn break"],
+              "meta": {
+                "boardPrefs": { "orientation": "black" },
+                "pieceToMove": "d7"
+              }
+            },
+            {
+              "type": "quiz",
+              "title": "Center quiz",
+              "meta": {
+                "quiz": {
+                  "question": "What is a common way to fight a strong pawn center?",
+                  "options": [
+                    { "id": "a", "text": "Ignore it" },
+                    { "id": "b", "text": "Undermine with pawn breaks" },
+                    { "id": "c", "text": "Move the queen early" },
+                    { "id": "d", "text": "Only move rook pawns" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Pawn breaks challenge and dissolve the opponent’s central control."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "king-safety-and-castling",
+          "title": "King Safety: Castling & When Not To",
+          "topic": "openings",
+          "level": "intermediate",
+          "description": "Castling patterns, common attacks, and when to delay castling.",
+          "estimated_minutes": 25,
+          "order_index": 3,
+          "prerequisite_lesson_ids": [],
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Why castling matters",
+              "body_md": "Explain king safety + rook activation."
+            },
+            {
+              "type": "move_task",
+              "title": "Castle at the right time",
+              "initial_fen": "r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 3",
+              "required_move_uci": "e1g1",
+              "hints": ["King safety first", "Connect rook soon"],
+              "meta": { "pieceToMove": "e1" }
+            },
+            {
+              "type": "quiz",
+              "title": "Castling quiz",
+              "meta": {
+                "quiz": {
+                  "question": "Which is usually a reason to delay castling?",
+                  "options": [
+                    {
+                      "id": "a",
+                      "text": "You can win material immediately with a tactic"
+                    },
+                    { "id": "b", "text": "You like moving pawns" },
+                    { "id": "c", "text": "Castling is always bad" },
+                    { "id": "d", "text": "You must castle on move 3" }
+                  ],
+                  "correctOptionId": "a",
+                  "explainMd": "Tactical opportunities can justify delaying castling briefly."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "opening-mistakes-and-punishments",
+          "title": "Common Opening Mistakes & Punishments",
+          "topic": "openings",
+          "level": "intermediate",
+          "description": "How to respond to early queen moves, pawn grabbing, and weak squares.",
+          "estimated_minutes": 35,
+          "order_index": 4,
+          "prerequisite_lesson_ids": [],
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Mistakes to watch for",
+              "body_md": "Early queen, neglect development, greedy pawn grabs."
+            },
+            {
+              "type": "puzzle",
+              "title": "Win tempo vs queen",
+              "initial_fen": "rnb1kbnr/pppp1ppp/8/4p3/3Pq3/8/PPP2PPP/RNBQKBNR w KQkq - 0 3",
+              "solution_line_uci": ["b1c3"],
+              "hints": ["Develop while attacking queen"],
+              "explain_correct_md": "Nc3 hits the queen and develops."
+            },
+            {
+              "type": "puzzle",
+              "title": "Punish ignoring development",
+              "initial_fen": "rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
+              "solution_line_uci": ["d2d4"],
+              "hints": ["Claim center with tempo"]
+            }
+          ]
+        },
+        {
+          "slug": "build-a-simple-repertoire",
+          "title": "Build a Simple Repertoire (Principles → Plan)",
+          "topic": "openings",
+          "level": "intermediate",
+          "description": "Pick 1–2 openings and learn plans, not memorization.",
+          "estimated_minutes": 25,
+          "order_index": 5,
+          "prerequisite_lesson_ids": [],
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Repertoire idea",
+              "body_md": "Choose: 1.e4 or 1.d4, and a response vs each."
+            },
+            {
+              "type": "model_line",
+              "title": "Sample plan-based line",
+              "initial_fen": "startpos",
+              "meta": {
+                "solution_line_uci_example": [
+                  "e2e4",
+                  "c7c5",
+                  "g1f3",
+                  "d7d6",
+                  "d2d4"
+                ]
+              }
+            },
+            {
+              "type": "quiz",
+              "title": "Repertoire quiz",
+              "meta": {
+                "quiz": {
+                  "question": "What should you learn first in an opening?",
+                  "options": [
+                    { "id": "a", "text": "20-move engine lines" },
+                    { "id": "b", "text": "Plans + typical piece placement" },
+                    { "id": "c", "text": "Random gambits only" },
+                    { "id": "d", "text": "Only endgames" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Plans + placement create consistent, practical play."
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "practice_packs_required": [
+        {
+          "slug": "opening-principles-drills",
+          "title": "Opening Principles Drills",
+          "level": "intermediate",
+          "topic": "openings",
+          "description": "Quick scenarios: develop, win tempo, castle, punish mistakes.",
+          "puzzle_topics": ["development", "center", "king_safety", "tempo"]
+        }
+      ]
+    },
+
+    {
+      "track_slug": "intermediate-endgames",
+      "track_title": "Essential Endgames",
+      "level": "intermediate",
+      "target_lesson_count": 6,
+      "target_estimated_hours": 3.5,
+      "track_outcomes": [
+        "Convert basic king+pawn endgames with opposition",
+        "Understand key rook endgame ideas (cutting off king, activity)",
+        "Know basic mating techniques (K+Q vs K, K+R vs K)",
+        "Recognize drawn vs winning pawn endings"
+      ],
+      "lessons": [
+        {
+          "slug": "king-activity-and-opposition",
+          "title": "King Activity & Opposition",
+          "topic": "endgames",
+          "level": "intermediate",
+          "description": "The king becomes a fighting piece in the endgame.",
+          "estimated_minutes": 35,
+          "order_index": 0,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "King activity",
+              "body_md": "Centralize king, shoulder opponent, create zugzwang."
+            },
+            {
+              "type": "move_task",
+              "title": "Take the opposition",
+              "initial_fen": "8/8/8/8/4k3/8/4K3/8 w - - 0 1",
+              "required_move_uci": "e2e3",
+              "hints": [
+                "Stand in front with one-square gap",
+                "Opposition wins key pawn endings"
+              ],
+              "meta": { "pieceToMove": "e2" }
+            },
+            {
+              "type": "quiz",
+              "title": "Opposition quiz",
+              "meta": {
+                "quiz": {
+                  "question": "Opposition usually helps you…",
+                  "options": [
+                    { "id": "a", "text": "Trade queens" },
+                    {
+                      "id": "b",
+                      "text": "Win key squares and create zugzwang"
+                    },
+                    { "id": "c", "text": "Avoid development" },
+                    { "id": "d", "text": "Pin pieces" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Opposition forces the opponent to give ground."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "kp-vs-k-basic-wins",
+          "title": "K+P vs K: The Key Squares",
+          "topic": "endgames",
+          "level": "intermediate",
+          "description": "How to know if a pawn endgame is winning.",
+          "estimated_minutes": 35,
+          "order_index": 1,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Key squares",
+              "body_md": "If king reaches key squares, pawn promotes."
+            },
+            {
+              "type": "puzzle",
+              "title": "Reach the key square",
+              "initial_fen": "8/8/8/8/8/4k3/4P3/4K3 w - - 0 1",
+              "solution_line_uci": ["e1d2"],
+              "hints": ["Bring king closer", "Support the pawn"]
+            }
+          ]
+        },
+        {
+          "slug": "basic-mates-qr",
+          "title": "Basic Checkmates: K+Q and K+R",
+          "topic": "endgames",
+          "level": "intermediate",
+          "description": "Learn the simplest mating patterns with major pieces.",
+          "estimated_minutes": 30,
+          "order_index": 2,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Boxing in the king",
+              "body_md": "Restrict squares step-by-step, bring king."
+            },
+            {
+              "type": "model_line",
+              "title": "K+Q vs K method",
+              "initial_fen": "6k1/8/8/8/8/8/8/5KQ1 w - - 0 1",
+              "meta": { "solution_line_uci_example": ["g1g7"] }
+            },
+            {
+              "type": "puzzle",
+              "title": "Mate in 2 with queen help",
+              "initial_fen": "6k1/8/8/8/8/8/5K2/6Q1 w - - 0 1",
+              "solution_line_uci": ["g1g7"]
+            }
+          ]
+        },
+        {
+          "slug": "rook-endgames-activity",
+          "title": "Rook Endgames: Activity & Cutting Off",
+          "topic": "endgames",
+          "level": "intermediate",
+          "description": "Active rooks win. Learn cutting off the king and checking from behind.",
+          "estimated_minutes": 45,
+          "order_index": 3,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Rook activity",
+              "body_md": "Rooks belong behind passed pawns; keep them active."
+            },
+            {
+              "type": "puzzle",
+              "title": "Cut off the king",
+              "initial_fen": "8/8/8/8/4k3/8/4P3/4KR2 w - - 0 1",
+              "solution_line_uci": ["f1f4"],
+              "hints": ["Use rook to restrict king", "Create a barrier"]
+            }
+          ]
+        },
+        {
+          "slug": "pawn-races-and-outside-passer",
+          "title": "Pawn Races & Outside Passed Pawn",
+          "topic": "endgames",
+          "level": "intermediate",
+          "description": "Calculate pawn races and learn why outside passers win games.",
+          "estimated_minutes": 35,
+          "order_index": 4,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Pawn race basics",
+              "body_md": "Count tempi, opposition, and king position."
+            },
+            {
+              "type": "quiz",
+              "title": "Pawn race quiz",
+              "meta": {
+                "quiz": {
+                  "question": "Why is an outside passed pawn powerful?",
+                  "options": [
+                    { "id": "a", "text": "It looks nice" },
+                    {
+                      "id": "b",
+                      "text": "It deflects the king away from the center"
+                    },
+                    { "id": "c", "text": "It pins a queen" },
+                    { "id": "d", "text": "It always mates" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "It drags the king away, letting you win elsewhere."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "endgame-checklist",
+          "title": "Endgame Checklist: What To Do First",
+          "topic": "endgames",
+          "level": "intermediate",
+          "description": "A simple decision framework for practical endgames.",
+          "estimated_minutes": 20,
+          "order_index": 5,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Checklist",
+              "body_md": "Activate king, improve worst piece, create passer, target weaknesses."
+            },
+            {
+              "type": "quiz",
+              "title": "Checklist quiz",
+              "meta": {
+                "quiz": {
+                  "question": "In most endgames, your first priority is…",
+                  "options": [
+                    { "id": "a", "text": "Trade pawns randomly" },
+                    { "id": "b", "text": "Activate the king" },
+                    { "id": "c", "text": "Move queen early" },
+                    { "id": "d", "text": "Sacrifice material" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "The king becomes your strongest piece in the endgame."
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "practice_packs_required": [
+        {
+          "slug": "essential-endgames-drills",
+          "title": "Essential Endgames Drills",
+          "level": "intermediate",
+          "topic": "endgames",
+          "description": "Opposition, key squares, rook activity, basic mates.",
+          "puzzle_topics": [
+            "opposition",
+            "kp_endings",
+            "rook_endgames",
+            "basic_mates"
+          ]
+        }
+      ]
+    },
+
+    {
+      "track_slug": "advanced-strategy",
+      "track_title": "Strategic Thinking",
+      "level": "advanced",
+      "target_lesson_count": 6,
+      "target_estimated_hours": 4.0,
+      "track_outcomes": [
+        "Evaluate positions using imbalances (space, structure, piece activity)",
+        "Create plans (improve worst piece, target weaknesses, pawn breaks)",
+        "Understand pawn structures and typical plans",
+        "Learn prophylaxis and converting advantages"
+      ],
+      "lessons": [
+        {
+          "slug": "how-to-evaluate-a-position",
+          "title": "How to Evaluate a Position (Imbalances)",
+          "topic": "strategy",
+          "level": "advanced",
+          "description": "Material, king safety, structure, activity — build a clear evaluation.",
+          "estimated_minutes": 40,
+          "order_index": 0,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Imbalances",
+              "body_md": "List imbalances and convert them into candidate plans."
+            },
+            {
+              "type": "quiz",
+              "title": "Evaluation quiz",
+              "meta": {
+                "quiz": {
+                  "question": "Which factor often matters most in quiet positions?",
+                  "options": [
+                    { "id": "a", "text": "Random sacrifices" },
+                    { "id": "b", "text": "Piece activity and pawn structure" },
+                    { "id": "c", "text": "Early queen moves" },
+                    { "id": "d", "text": "Avoiding castling" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Activity + structure usually define long-term advantage."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "pawn-structures-and-plans",
+          "title": "Pawn Structures & Typical Plans",
+          "topic": "strategy",
+          "level": "advanced",
+          "description": "Isolated pawn, doubled pawns, pawn chains, weak squares.",
+          "estimated_minutes": 45,
+          "order_index": 1,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Structures",
+              "body_md": "Explain: weak squares, open files, outposts."
+            },
+            {
+              "type": "model_line",
+              "title": "Create a pawn break",
+              "initial_fen": "r1bq1rk1/pp3ppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1",
+              "meta": { "solution_line_uci_example": ["d4c5"] }
+            },
+            {
+              "type": "puzzle",
+              "title": "Find the pawn break",
+              "initial_fen": "r1bq1rk1/pp3ppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["d4c5"],
+              "hints": ["Break the center", "Open lines for pieces"]
+            }
+          ]
+        },
+        {
+          "slug": "outposts-and-good-vs-bad-bishop",
+          "title": "Outposts & Good vs Bad Bishop",
+          "topic": "strategy",
+          "level": "advanced",
+          "description": "How to place pieces on strong squares and improve minor pieces.",
+          "estimated_minutes": 35,
+          "order_index": 2,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Outpost definition",
+              "body_md": "Knight supported by pawn; cannot be chased by enemy pawn."
+            },
+            {
+              "type": "quiz",
+              "title": "Piece improvement",
+              "meta": {
+                "quiz": {
+                  "question": "What makes a square an outpost for a knight?",
+                  "options": [
+                    { "id": "a", "text": "It is on the edge" },
+                    {
+                      "id": "b",
+                      "text": "It is protected by a pawn and cannot be attacked by enemy pawns"
+                    },
+                    { "id": "c", "text": "It is near your king" },
+                    { "id": "d", "text": "It is any empty square" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "An outpost is stable and hard to challenge with pawns."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "prophylaxis-and-preventing-counterplay",
+          "title": "Prophylaxis: Stop Their Plan",
+          "topic": "strategy",
+          "level": "advanced",
+          "description": "Prevent counterplay, restrict pieces, improve safety.",
+          "estimated_minutes": 40,
+          "order_index": 3,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Think like your opponent",
+              "body_md": "Ask: what does opponent want? what is their best plan?"
+            },
+            {
+              "type": "puzzle",
+              "title": "Find the preventive move",
+              "initial_fen": "r2q1rk1/pp2bppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["d2b3"],
+              "hints": ["Improve piece and prevent pressure"]
+            }
+          ]
+        },
+        {
+          "slug": "convert-small-advantages",
+          "title": "Converting Small Advantages",
+          "topic": "strategy",
+          "level": "advanced",
+          "description": "Trade correctly, simplify, create targets, improve worst piece.",
+          "estimated_minutes": 35,
+          "order_index": 4,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Conversion rules",
+              "body_md": "When ahead: trade pieces not pawns; keep king safe; improve position."
+            },
+            {
+              "type": "quiz",
+              "title": "Conversion quiz",
+              "meta": {
+                "quiz": {
+                  "question": "When you are up material, you usually want to…",
+                  "options": [
+                    {
+                      "id": "a",
+                      "text": "Trade queens and minor pieces when safe"
+                    },
+                    { "id": "b", "text": "Avoid any exchanges" },
+                    { "id": "c", "text": "Push random pawns" },
+                    { "id": "d", "text": "Sacrifice back the material" }
+                  ],
+                  "correctOptionId": "a",
+                  "explainMd": "Simplification reduces tactical risk and converts advantage."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "strategic-mini-test",
+          "title": "Strategic Mini-Test (Mixed Positions)",
+          "topic": "strategy",
+          "level": "advanced",
+          "description": "A checkpoint lesson with mixed evaluation + best-plan puzzles.",
+          "estimated_minutes": 35,
+          "order_index": 5,
+          "steps_blueprint": [
+            {
+              "type": "puzzle",
+              "title": "Find best plan move 1",
+              "initial_fen": "r1bq1rk1/pp3ppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["d4c5"]
+            },
+            {
+              "type": "puzzle",
+              "title": "Find best plan move 2",
+              "initial_fen": "r2q1rk1/pp2bppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["d2b3"]
+            },
+            {
+              "type": "quiz",
+              "title": "Mini-test quiz",
+              "meta": {
+                "quiz": {
+                  "question": "Strategic thinking starts with…",
+                  "options": [
+                    { "id": "a", "text": "Random attacks" },
+                    {
+                      "id": "b",
+                      "text": "Evaluating imbalances and making a plan"
+                    },
+                    { "id": "c", "text": "Memorizing openings only" },
+                    { "id": "d", "text": "Avoiding endgames" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Evaluation → plan → execution is the strategic loop."
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "practice_packs_required": [
+        {
+          "slug": "strategy-planning-drills",
+          "title": "Strategy Planning Drills",
+          "level": "advanced",
+          "topic": "strategy",
+          "description": "Best-plan puzzles: pawn breaks, outposts, prophylaxis, conversion.",
+          "puzzle_topics": [
+            "pawn_break",
+            "outpost",
+            "prophylaxis",
+            "conversion"
+          ]
+        }
+      ]
+    },
+
+    {
+      "track_slug": "expert-mastery",
+      "track_title": "Master Class",
+      "level": "expert",
+      "target_lesson_count": 6,
+      "target_estimated_hours": 5.0,
+      "track_outcomes": [
+        "Apply candidate move thinking and deeper calculation",
+        "Understand advanced endgame technique and transition decisions",
+        "Learn model games with annotated plans",
+        "Develop tournament habits: time management, practical choices"
+      ],
+      "lessons": [
+        {
+          "slug": "candidate-moves-and-calculation",
+          "title": "Candidate Moves & Calculation Tree",
+          "topic": "calculation",
+          "level": "expert",
+          "description": "How strong players calculate: candidates, forcing moves, pruning.",
+          "estimated_minutes": 50,
+          "order_index": 0,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Candidate move method",
+              "body_md": "Generate candidates, prioritize forcing moves, calculate critical lines."
+            },
+            {
+              "type": "puzzle",
+              "title": "Forcing line puzzle",
+              "initial_fen": "r2q1rk1/ppp2ppp/2n2n2/3pp3/2B1P3/2N2N2/PPPP1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["c4d5"],
+              "hints": ["Look for forcing captures/checks"]
+            },
+            {
+              "type": "quiz",
+              "title": "Calculation quiz",
+              "meta": {
+                "quiz": {
+                  "question": "What should you calculate first?",
+                  "options": [
+                    { "id": "a", "text": "Quiet pawn moves" },
+                    {
+                      "id": "b",
+                      "text": "Forcing moves: checks, captures, threats"
+                    },
+                    { "id": "c", "text": "Random rook moves" },
+                    { "id": "d", "text": "Only endgames" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Forcing moves narrow the opponent’s replies and reduce branching."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "positional-sacrifices",
+          "title": "Positional Sacrifices (When Material Doesn’t Matter)",
+          "topic": "strategy",
+          "level": "expert",
+          "description": "Exchange sacs, initiative, domination, and practical compensation.",
+          "estimated_minutes": 45,
+          "order_index": 1,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Compensation checklist",
+              "body_md": "King safety, activity, structure, pawn count, piece coordination."
+            },
+            {
+              "type": "puzzle",
+              "title": "Exchange sac motif",
+              "initial_fen": "r1bq1rk1/ppp2ppp/2n2n2/3pp3/2B1P3/2N2N2/PPPP1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["c4d5"]
+            }
+          ]
+        },
+        {
+          "slug": "advanced-rook-endgames",
+          "title": "Advanced Rook Endgames (Lucena/Philidor Intro)",
+          "topic": "endgames",
+          "level": "expert",
+          "description": "Key theoretical positions that decide real games.",
+          "estimated_minutes": 55,
+          "order_index": 2,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Lucena idea",
+              "body_md": "Build a bridge; cut off king; promote."
+            },
+            {
+              "type": "model_line",
+              "title": "Lucena sample",
+              "initial_fen": "8/8/8/8/8/8/4K3/4R1k1 w - - 0 1",
+              "meta": { "solution_line_uci_example": ["e1e8"] }
+            },
+            {
+              "type": "quiz",
+              "title": "Theory quiz",
+              "meta": {
+                "quiz": {
+                  "question": "In rook endgames, activity usually means…",
+                  "options": [
+                    { "id": "a", "text": "Passive defense behind pawns" },
+                    {
+                      "id": "b",
+                      "text": "Rook behind passed pawns and checking from behind"
+                    },
+                    { "id": "c", "text": "Never checking" },
+                    { "id": "d", "text": "Trading rooks immediately" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Active rooks create counterplay and stop pawns effectively."
+                }
+              }
+            }
+          ]
+        },
+        {
+          "slug": "transition-decisions",
+          "title": "Middlegame → Endgame Transitions",
+          "topic": "strategy",
+          "level": "expert",
+          "description": "When to trade pieces, simplify, and choose the right endgame.",
+          "estimated_minutes": 45,
+          "order_index": 3,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "Trade logic",
+              "body_md": "Trade into favorable pawn structure, better king, active pieces."
+            },
+            {
+              "type": "puzzle",
+              "title": "Choose the right exchange",
+              "initial_fen": "r1bq1rk1/pp3ppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["d4c5"]
+            }
+          ]
+        },
+        {
+          "slug": "model-game-annotated-1",
+          "title": "Model Game: Annotated Plan (Classic Example)",
+          "topic": "strategy",
+          "level": "expert",
+          "description": "Replay a classic game with key moments and plans explained.",
+          "estimated_minutes": 55,
+          "order_index": 4,
+          "steps_blueprint": [
+            {
+              "type": "explain",
+              "title": "What to look for",
+              "body_md": "Plans, pawn breaks, piece reroutes, endgame decisions."
+            },
+            {
+              "type": "model_line",
+              "title": "Key segment 1",
+              "initial_fen": "startpos",
+              "meta": { "solution_line_uci_example": ["d2d4", "d7d5", "c2c4"] }
+            },
+            {
+              "type": "model_line",
+              "title": "Key segment 2",
+              "initial_fen": "startpos",
+              "meta": { "solution_line_uci_example": ["g1f3", "g8f6", "c1g5"] }
+            }
+          ]
+        },
+        {
+          "slug": "master-class-checkpoint",
+          "title": "Master Class Checkpoint (Mixed Test)",
+          "topic": "calculation",
+          "level": "expert",
+          "description": "Mixed puzzles + quizzes combining calculation, strategy, and endgames.",
+          "estimated_minutes": 50,
+          "order_index": 5,
+          "steps_blueprint": [
+            {
+              "type": "puzzle",
+              "title": "Tactical calculation test",
+              "initial_fen": "r2q1rk1/ppp2ppp/2n2n2/3pp3/2B1P3/2N2N2/PPPP1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["c4d5"]
+            },
+            {
+              "type": "puzzle",
+              "title": "Strategic best-plan test",
+              "initial_fen": "r1bq1rk1/pp3ppp/2n1pn2/2bp4/3P4/2P1PN2/PP1N1PPP/R1BQ1RK1 w - - 0 1",
+              "solution_line_uci": ["d4c5"]
+            },
+            {
+              "type": "quiz",
+              "title": "Tournament habits",
+              "meta": {
+                "quiz": {
+                  "question": "Under time pressure, the best practical approach is…",
+                  "options": [
+                    { "id": "a", "text": "Find the flashiest sacrifice" },
+                    {
+                      "id": "b",
+                      "text": "Choose a solid candidate move and avoid blunders"
+                    },
+                    { "id": "c", "text": "Resign early" },
+                    { "id": "d", "text": "Move instantly without thinking" }
+                  ],
+                  "correctOptionId": "b",
+                  "explainMd": "Practical chess rewards safe decisions and blunder-avoidance when low on time."
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "practice_packs_required": [
+        {
+          "slug": "master-class-mixed-drills",
+          "title": "Master Class Mixed Drills",
+          "level": "expert",
+          "topic": "calculation",
+          "description": "Hard mixed positions: calculation, conversion, endgame theory.",
+          "puzzle_topics": [
+            "calculation",
+            "positional_sacrifice",
+            "rook_endgames",
+            "transition"
+          ]
+        }
+      ]
+    }
+  ],
+  "implementation_requirements_for_ai": {
+    "db_seed_tasks": [
+      "For each track slug above: lookup learn_tracks.id",
+      "Insert learn_lessons for that track with correct order_index and is_published=true",
+      "Insert learn_lesson_steps for each lesson using steps_blueprint ordering",
+      "Ensure each lesson has at least 1 move_task OR puzzle OR quiz",
+      "Create practice packs listed (learn_practice_packs) and link puzzles (learn_pack_items) if puzzles exist; otherwise seed placeholder puzzles per topic"
+    ],
+    "content_quality_checks": [
+      "Validate required_move_uci is legal from initial_fen using chess.js (server-side seed validation recommended)",
+      "If initial_fen is 'startpos', AI must replace it with the actual FEN for starting position in inserts",
+      "For quiz steps: meta.quiz must include question, options (id/text), correctOptionId, explainMd",
+      "For move_task steps: meta.pieceToMove should match the from-square of required_move_uci"
+    ],
+    "ui_checks": [
+      "Track cards should show accurate lesson count and estimated time from DB",
+      "Lesson player should render new topics (openings/endgames/strategy/calculation) consistently",
+      "Progress bar updates when lessons completed"
+    ]
+  }
+}

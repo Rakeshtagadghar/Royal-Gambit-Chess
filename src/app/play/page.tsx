@@ -7,8 +7,10 @@ import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { InvitationsPanel } from '@/components/invitations/InvitationsPanel';
-import { Bot, Users, UserPlus, Zap, Clock, Trophy } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { Bot, Users, UserPlus, Zap, Clock, Trophy, Gamepad2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const gameModes = [
@@ -67,13 +69,31 @@ function VerificationToast() {
 }
 
 export default function PlayPage() {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 text-center">
+          <Gamepad2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h1 className="text-2xl font-bold mb-2">Play Chess</h1>
+          <p className="text-muted-foreground mb-4">Sign in to access all game modes</p>
+          <Button asChild>
+            <Link href="/login?redirect=/play">Sign In</Link>
+          </Button>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <Suspense fallback={null}>
         <VerificationToast />
       </Suspense>
-      
+
       <main className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

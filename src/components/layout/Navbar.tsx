@@ -23,12 +23,20 @@ import {
   User,
   Menu,
   X,
-  Trophy
+  Trophy,
+  GraduationCap,
 } from 'lucide-react';
 import { useState } from 'react';
 
-const navItems = [
+const publicNavItems = [
   { href: '/play', label: 'Play', icon: Gamepad2 },
+  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+  { href: '/archive', label: 'Archive', icon: Archive },
+];
+
+const authNavItems = [
+  { href: '/play', label: 'Play', icon: Gamepad2 },
+  { href: '/learn', label: 'Learn', icon: GraduationCap },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/archive', label: 'Archive', icon: Archive },
 ];
@@ -37,6 +45,8 @@ export function Navbar() {
   const pathname = usePathname();
   const { user, profile, isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const navItems = isAuthenticated ? authNavItems : publicNavItems;
 
   const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const userMetaPicture = typeof userMeta.picture === 'string' ? userMeta.picture : undefined;

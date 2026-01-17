@@ -5,18 +5,20 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Navbar } from '@/components/layout/Navbar';
-import { 
-  Bot, 
-  Users, 
-  Trophy, 
-  Zap, 
-  Shield, 
+import {
+  Bot,
+  Users,
+  Trophy,
+  Zap,
+  Shield,
   Clock,
   ChevronRight,
-  Github
+  GraduationCap,
+  Award,
+  Puzzle
 } from 'lucide-react';
 
-const features = [
+const playFeatures = [
   {
     icon: Bot,
     title: 'Play vs Bot',
@@ -32,6 +34,27 @@ const features = [
     title: 'Matchmaking',
     description: 'Find opponents automatically. Queue by time control preference.',
   },
+];
+
+const learnFeatures = [
+  {
+    icon: GraduationCap,
+    title: 'Interactive Lessons',
+    description: 'Step-by-step lessons from basics to advanced strategy with guided practice.',
+  },
+  {
+    icon: Puzzle,
+    title: 'Practice Puzzles',
+    description: 'Sharpen your tactics with curated puzzle packs. Track your accuracy.',
+  },
+  {
+    icon: Award,
+    title: 'Achievements',
+    description: 'Earn badges as you progress. Track streaks and unlock rewards.',
+  },
+];
+
+const platformFeatures = [
   {
     icon: Clock,
     title: 'Time Controls',
@@ -47,6 +70,40 @@ const features = [
     title: 'Lightning Fast',
     description: 'Optimized for speed. Smooth animations and instant feedback.',
   },
+];
+
+const learningTracks = [
+  {
+    level: 'Beginner',
+    title: 'Chess Basics',
+    description: 'Learn piece movement, rules, and fundamental concepts',
+    color: 'from-green-500 to-emerald-600',
+  },
+  {
+    level: 'Intermediate',
+    title: 'Tactics & Patterns',
+    description: 'Master forks, pins, skewers, and common tactical motifs',
+    color: 'from-blue-500 to-cyan-600',
+  },
+  {
+    level: 'Advanced',
+    title: 'Strategy & Planning',
+    description: 'Develop positional understanding and long-term planning',
+    color: 'from-purple-500 to-violet-600',
+  },
+  {
+    level: 'Expert',
+    title: 'Master Techniques',
+    description: 'Advanced endgames, complex calculations, and deep analysis',
+    color: 'from-orange-500 to-red-600',
+  },
+];
+
+const sampleAchievements = [
+  { icon: '🎯', title: 'First Steps', description: 'Complete your first lesson' },
+  { icon: '🔥', title: 'On Fire', description: 'Maintain a 7-day streak' },
+  { icon: '🧩', title: 'Puzzle Master', description: 'Solve 100 puzzles' },
+  { icon: '👑', title: 'Track Champion', description: 'Complete an entire track' },
 ];
 
 export default function HomePage() {
@@ -83,9 +140,9 @@ export default function HomePage() {
                 RoyalGambit
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground mb-8">
-                A modern chess platform.
+                Play, Learn, and Master Chess.
                 <br />
-                Play against bots, friends, or find opponents online.
+                Interactive lessons, tactical puzzles, and competitive play.
               </p>
             </motion.div>
 
@@ -152,21 +209,156 @@ export default function HomePage() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature, index) => (
+          {/* Play Features */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4 text-center text-muted-foreground">Play</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {playFeatures.map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="h-full hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                      <feature.icon className="h-10 w-10 text-primary mb-2" />
+                      <CardTitle>{feature.title}</CardTitle>
+                      <CardDescription>{feature.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Learn Features */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold mb-4 text-center text-muted-foreground">Learn & Improve</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {learnFeatures.map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="h-full hover:border-accent/50 transition-colors border-accent/20">
+                    <CardHeader>
+                      <feature.icon className="h-10 w-10 text-accent mb-2" />
+                      <CardTitle>{feature.title}</CardTitle>
+                      <CardDescription>{feature.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Platform Features */}
+          <div>
+            <h3 className="text-xl font-semibold mb-4 text-center text-muted-foreground">Platform</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {platformFeatures.map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Card className="h-full hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                      <feature.icon className="h-10 w-10 text-muted-foreground mb-2" />
+                      <CardTitle>{feature.title}</CardTitle>
+                      <CardDescription>{feature.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Learning Tracks Preview Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Structured Learning Paths
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              From beginner to expert, progress at your own pace.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {learningTracks.map((track, index) => (
               <motion.div
-                key={feature.title}
+                key={track.level}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Card className="h-full hover:border-primary/50 transition-colors">
+                <Card className="h-full overflow-hidden">
+                  <div className={`h-2 bg-gradient-to-r ${track.color}`} />
                   <CardHeader>
-                    <feature.icon className="h-10 w-10 text-primary mb-2" />
-                    <CardTitle>{feature.title}</CardTitle>
-                    <CardDescription>{feature.description}</CardDescription>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full bg-gradient-to-r ${track.color} text-white`}>
+                        {track.level}
+                      </span>
+                    </div>
+                    <CardTitle className="text-lg">{track.title}</CardTitle>
+                    <CardDescription>{track.description}</CardDescription>
                   </CardHeader>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Achievements Preview Section */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Earn Achievements
+            </h2>
+            <p className="text-muted-foreground text-lg">
+              Track your progress and unlock badges as you improve.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+            {sampleAchievements.map((achievement, index) => (
+              <motion.div
+                key={achievement.title}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Card className="h-full text-center hover:border-accent/50 transition-colors">
+                  <CardContent className="pt-6">
+                    <div className="text-4xl mb-3">{achievement.icon}</div>
+                    <h3 className="font-semibold text-sm mb-1">{achievement.title}</h3>
+                    <p className="text-xs text-muted-foreground">{achievement.description}</p>
+                  </CardContent>
                 </Card>
               </motion.div>
             ))}
@@ -184,24 +376,21 @@ export default function HomePage() {
           >
             <Card className="max-w-2xl mx-auto bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
               <CardContent className="py-12">
-                <h2 className="text-3xl font-bold mb-4">Ready to Play?</h2>
+                <h2 className="text-3xl font-bold mb-4">Ready to Start?</h2>
                 <p className="text-muted-foreground mb-6">
-                  No account required to play against the bot. Sign up to play online and track your games.
+                  Create a free account to play against bots, challenge friends, access interactive lessons, and track your progress.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button asChild size="lg">
-                    <Link href="/bot">
-                      <Bot className="mr-2 h-5 w-5" />
-                      Play vs Bot
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" size="lg">
                     <Link href="/login">
-                      <Users className="mr-2 h-5 w-5" />
-                      Play Online
+                      <ChevronRight className="mr-2 h-5 w-5" />
+                      Get Started Free
                     </Link>
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-4">
+                  Sign up with email or Google. No credit card required.
+                </p>
               </CardContent>
             </Card>
           </motion.div>
@@ -216,17 +405,11 @@ export default function HomePage() {
               <span className="text-2xl">♟</span>
               <span className="font-semibold">RoyalGambit</span>
             </div>
-            <Button variant="ghost" size="sm" asChild>
-              <a 
-                href="https://github.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2"
-              >
-                <Github className="h-4 w-4" />
-                View on GitHub
-              </a>
-            </Button>
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <Link href="/learn" className="hover:text-foreground transition-colors">Learn</Link>
+              <Link href="/play" className="hover:text-foreground transition-colors">Play</Link>
+              <Link href="/leaderboard" className="hover:text-foreground transition-colors">Leaderboard</Link>
+            </div>
           </div>
         </div>
       </footer>
