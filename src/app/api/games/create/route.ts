@@ -9,6 +9,16 @@ interface CreateGameBody {
   timeControl: TimeControl;
 }
 
+// Generate a 6-character alphanumeric code (excluding ambiguous chars like 0, O, I, 1)
+function generateGameCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -45,6 +55,23 @@ export async function POST(request: NextRequest) {
     // Determine the rating mode based on time control
     const gameMode = getRatingModeFromTimeControl(timeControl);
 
+    // Generate a unique game code with retry logic
+    let gameCode = generateGameCode();
+    let retries = 0;
+    const maxRetries = 5;
+
+    while (retries < maxRetries) {
+      const { data: existing } = await supabase
+        .from('games')
+        .select('id')
+        .eq('game_code', gameCode)
+        .maybeSingle();
+
+      if (!existing) break;
+      gameCode = generateGameCode();
+      retries++;
+    }
+
     // Create the game
     const { data: game, error: createError } = await supabase
       .from('games')
@@ -60,6 +87,7 @@ export async function POST(request: NextRequest) {
         pgn: '',
         result: '*',
         time_control: timeControl,
+        game_code: gameCode,
       })
       .select()
       .single();
@@ -71,6 +99,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       gameId: game.id,
+      gameCode: game.game_code,
       joinUrl: `/game/${game.id}`,
     });
   } catch (error) {

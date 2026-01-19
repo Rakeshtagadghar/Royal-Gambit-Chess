@@ -33,6 +33,7 @@ function LobbyContent() {
   const [selectedTimeControl, setSelectedTimeControl] = useState<TimeControl>(TIME_CONTROLS[4].control);
   const [selectedColor, setSelectedColor] = useState<ColorPreference>('random');
   const [gameLink, setGameLink] = useState<string | null>(null);
+  const [gameCode, setGameCode] = useState<string | null>(null);
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -61,10 +62,11 @@ function LobbyContent() {
 
       if (!response.ok) throw new Error('Failed to create game');
 
-      const { gameId } = await response.json();
+      const { gameId, gameCode: code } = await response.json();
       const link = `${window.location.origin}/game/${gameId}`;
       setGameLink(link);
-      toast.success('Game created! Share the link with your friend.');
+      setGameCode(code || null);
+      toast.success('Game created! Share the code with your friend.');
     } catch {
       toast.error('Failed to create game');
     } finally {
@@ -86,20 +88,21 @@ function LobbyContent() {
     setIsJoining(true);
     try {
       // Extract game ID from URL if full URL was pasted
-      let gameId = joinCode.trim();
-      if (gameId.includes('/game/')) {
-        gameId = gameId.split('/game/').pop() || '';
+      let input = joinCode.trim();
+      if (input.includes('/game/')) {
+        input = input.split('/game/').pop() || '';
       }
 
       const response = await fetch(apiUrls.games.join(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId }),
+        body: JSON.stringify({ gameId: input }),
       });
 
       if (!response.ok) throw new Error('Failed to join game');
 
-      router.push(`/game/${gameId}`);
+      const { game } = await response.json();
+      router.push(`/game/${game.id}`);
     } catch {
       toast.error('Failed to join game. Check the code and try again.');
     } finally {
@@ -299,8 +302,8 @@ function LobbyContent() {
                   {/* Time Control */}
                   <div>
                     <label className="text-sm font-medium mb-2 block">Time Control</label>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                      {TIME_CONTROLS.slice(0, 5).map((tc) => (
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {[0, 1, 2, 3, 4, 9].map((idx) => TIME_CONTROLS[idx]).map((tc) => (
                         <Button
                           key={tc.label}
                           variant={
@@ -342,23 +345,58 @@ function LobbyContent() {
 
                   {gameLink ? (
                     <div className="space-y-3">
-                      <div className="flex gap-2">
-                        <Input value={gameLink} readOnly className="font-mono text-sm" />
-                        <Button variant="outline" size="icon" onClick={copyLink}>
-                          {copied ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
+                      {/* Game Code - Primary sharing method */}
+                      {gameCode && (
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Game Code</label>
+                          <div className="flex gap-2">
+                            <Input
+                              value={gameCode}
+                              readOnly
+                              className="font-mono text-xl tracking-widest text-center font-bold"
+                            />
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                navigator.clipboard.writeText(gameCode);
+                                toast.success('Game code copied!');
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Share this code with your friend
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Full Link - Secondary option */}
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">Or share link</label>
+                        <div className="flex gap-2">
+                          <Input value={gameLink} readOnly className="font-mono text-sm" />
+                          <Button variant="outline" size="icon" onClick={copyLink}>
+                            {copied ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
+
                       <div className="flex gap-2">
                         <Button onClick={goToGame} className="flex-1">
                           Go to Game
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setGameLink(null)}
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setGameLink(null);
+                            setGameCode(null);
+                          }}
                         >
                           Create New
                         </Button>

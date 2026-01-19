@@ -3,7 +3,19 @@ import { createClient } from '@/lib/supabase/server';
 import { ensureProfileExists } from '@/lib/supabase/ensureProfile';
 
 interface JoinGameBody {
-  gameId: string;
+  gameId?: string;
+  gameCode?: string;
+}
+
+// Check if input looks like a UUID
+function isUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+// Check if input looks like a 6-char game code
+function isGameCode(str: string): boolean {
+  return /^[A-Z0-9]{6}$/i.test(str);
 }
 
 export async function POST(request: NextRequest) {
@@ -20,7 +32,53 @@ export async function POST(request: NextRequest) {
     await ensureProfileExists(supabase, user);
 
     const body: JoinGameBody = await request.json();
-    const { gameId } = body;
+    let { gameId, gameCode } = body;
+
+    // Auto-detect if gameId is actually a game code
+    if (gameId && !gameCode) {
+      if (isGameCode(gameId) && !isUUID(gameId)) {
+        gameCode = gameId.toUpperCase();
+        gameId = undefined;
+      }
+    }
+
+    // Try joining by game code first if provided
+    if (gameCode) {
+      const { data: rpcGame, error: rpcError } = await supabase.rpc('join_game_by_code', {
+        p_game_code: gameCode.toUpperCase(),
+      });
+
+      if (!rpcError && rpcGame) {
+        return NextResponse.json({ game: rpcGame });
+      }
+
+      if (rpcError) {
+        console.warn('join_game_by_code RPC failed:', rpcError);
+        // Function doesn't exist yet - fall back to lookup + join_game
+        if (rpcError.code !== 'PGRST202') {
+          return NextResponse.json(
+            { error: rpcError.message || 'Failed to join game' },
+            { status: 400 }
+          );
+        }
+        // Try to look up the game by code and get its ID
+        const { data: gameByCode } = await supabase
+          .from('games')
+          .select('id')
+          .eq('game_code', gameCode.toUpperCase())
+          .single();
+
+        if (gameByCode) {
+          gameId = gameByCode.id;
+        } else {
+          return NextResponse.json({ error: 'Game not found' }, { status: 404 });
+        }
+      }
+    }
+
+    if (!gameId) {
+      return NextResponse.json({ error: 'Game ID or code required' }, { status: 400 });
+    }
 
     // Preferred: use SQL function (SECURITY DEFINER) to bypass RLS safely.
     // If the function isn't installed yet, we'll fall back to the old logic below.
