@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 type ConfettiPiece = {
@@ -12,6 +12,8 @@ type ConfettiPiece = {
   duration: number;
   color: string;
   drift: number;
+  yEnd: number;
+  rotateEnd: number;
 };
 
 const COLORS = ['#22c55e', '#3b82f6', '#a855f7', '#f59e0b', '#ef4444', '#06b6d4', '#eab308'];
@@ -20,33 +22,45 @@ function rand(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
-export function ConfettiBurst({ trigger }: { trigger: boolean }) {
-  const [visible, setVisible] = useState(false);
+function generatePieces(): ConfettiPiece[] {
+  return Array.from({ length: 56 }).map((_, idx) => ({
+    id: idx,
+    leftPct: rand(0, 100),
+    size: rand(6, 12),
+    rotate: rand(0, 360),
+    delay: rand(0, 0.25),
+    duration: rand(1.6, 2.4),
+    color: COLORS[Math.floor(rand(0, COLORS.length))],
+    drift: rand(-140, 140),
+    yEnd: rand(420, 920),
+    rotateEnd: rand(360, 900),
+  }));
+}
 
-  // Generate once per mount for a stable animation.
-  const pieces = useMemo<ConfettiPiece[]>(() => {
-    return Array.from({ length: 56 }).map((_, idx) => ({
-      id: idx,
-      leftPct: rand(0, 100),
-      size: rand(6, 12),
-      rotate: rand(0, 360),
-      delay: rand(0, 0.25),
-      duration: rand(1.6, 2.4),
-      color: COLORS[Math.floor(rand(0, COLORS.length))]!,
-      drift: rand(-140, 140),
-    }));
-  }, []);
+export function ConfettiBurst({ trigger }: { trigger: boolean }) {
+  const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
+  const prevTriggerRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!trigger) return;
-    setVisible(true);
-    const t = window.setTimeout(() => setVisible(false), 2600);
-    return () => window.clearTimeout(t);
+    // Detect rising edge (false -> true)
+    const shouldTrigger = trigger && !prevTriggerRef.current;
+    prevTriggerRef.current = trigger;
+
+    if (shouldTrigger) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPieces(generatePieces());
+      timeoutRef.current = setTimeout(() => setPieces([]), 2600);
+    }
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, [trigger]);
 
   return (
     <AnimatePresence>
-      {visible && (
+      {pieces.length > 0 && (
         <motion.div
           className="pointer-events-none fixed inset-0 z-[60] overflow-hidden"
           initial={{ opacity: 0 }}
@@ -70,9 +84,9 @@ export function ConfettiBurst({ trigger }: { trigger: boolean }) {
                 opacity: 0,
               }}
               animate={{
-                y: [0, rand(420, 920)],
+                y: [0, p.yEnd],
                 x: [0, p.drift],
-                rotate: [p.rotate, p.rotate + rand(360, 900)],
+                rotate: [p.rotate, p.rotate + p.rotateEnd],
                 opacity: [0, 1, 1, 0],
               }}
               transition={{

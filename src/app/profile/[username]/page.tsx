@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { Profile, Rating, RatingMode } from '@/types/chess';
@@ -37,7 +36,7 @@ export default function ProfilePage() {
   const params = useParams();
   const router = useRouter();
   const username = params.username as string;
-  const { user, profile: currentUserProfile } = useAuth();
+  const { profile: currentUserProfile } = useAuth();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -160,7 +159,7 @@ export default function ProfilePage() {
         <main className="container mx-auto px-4 py-8 text-center">
           <User className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-2xl font-bold mb-2">User Not Found</h1>
-          <p className="text-muted-foreground">The user @{username} doesn't exist</p>
+          <p className="text-muted-foreground">The user @{username} doesn&apos;t exist</p>
         </main>
       </div>
     );

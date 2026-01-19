@@ -19,7 +19,6 @@ import { useLearnStore } from '@/stores/learnStore';
 import { useAuth } from '@/hooks/useAuth';
 import {
   LearnLesson,
-  LearnLessonStep,
   LearnTrack,
   LEVEL_LABELS,
   LEVEL_COLORS,
@@ -56,6 +55,7 @@ export default function LessonPlayerPage() {
   useEffect(() => {
     loadLesson();
     return () => reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lessonSlug]);
 
   async function loadLesson() {
@@ -150,6 +150,7 @@ export default function LessonPlayerPage() {
     if (!loading && user && lesson) {
       saveProgress(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStepIndex]);
 
   if (loading) {
@@ -176,8 +177,6 @@ export default function LessonPlayerPage() {
   if (!lesson) {
     return null;
   }
-
-  const currentStep = steps[currentStepIndex];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

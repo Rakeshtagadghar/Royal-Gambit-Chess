@@ -5,6 +5,7 @@
 // For local development, this provides a fallback that makes random moves
 // Replace with actual stockfish.js for full engine support
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let initialized = false;
 
 self.onmessage = function(e) {

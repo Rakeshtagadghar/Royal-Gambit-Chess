@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/server';
  * Get the recommended next lesson for the user.
  * Returns the first incomplete lesson in the first incomplete track.
  */
-export async function GET(request: NextRequest) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient();
 

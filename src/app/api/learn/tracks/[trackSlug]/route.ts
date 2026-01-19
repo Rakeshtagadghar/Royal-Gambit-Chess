@@ -44,8 +44,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get user progress if authenticated
-    let progressMap = new Map<string, { status: string; lastStepIndex: number }>();
-    let completedLessonIds = new Set<string>();
+    const progressMap = new Map<string, { status: string; lastStepIndex: number }>();
+    const completedLessonIds = new Set<string>();
 
     if (user && lessons && lessons.length > 0) {
       const lessonIds = lessons.map((l) => l.id);

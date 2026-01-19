@@ -8,6 +8,7 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
 import { ReCaptcha } from "@/components/recaptcha/ReCaptcha";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
+import { DevIndicator } from "@/components/DevIndicator";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +53,7 @@ export default function RootLayout({
           {children}
           <Toaster />
           <CookieConsent />
+          <DevIndicator />
         </Providers>
       </body>
     </html>

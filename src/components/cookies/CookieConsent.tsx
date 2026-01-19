@@ -12,18 +12,18 @@ type ConsentType = "all" | "essential" | null;
 
 export function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false);
-  const [consent, setConsent] = useState<ConsentType>(null);
+  const [consent, setConsent] = useState<ConsentType>(() => {
+    if (globalThis.window === undefined) return null;
+    return localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType;
+  });
 
   useEffect(() => {
-    const storedConsent = localStorage.getItem(COOKIE_CONSENT_KEY);
-    if (!storedConsent) {
+    if (consent === null) {
       // Delay showing banner for better UX
       const timer = setTimeout(() => setShowBanner(true), 1000);
       return () => clearTimeout(timer);
-    } else {
-      setConsent(storedConsent as ConsentType);
     }
-  }, []);
+  }, [consent]);
 
   const acceptAll = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "all");

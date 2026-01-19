@@ -65,7 +65,7 @@ function LobbyContent() {
       const link = `${window.location.origin}/game/${gameId}`;
       setGameLink(link);
       toast.success('Game created! Share the link with your friend.');
-    } catch (error) {
+    } catch {
       toast.error('Failed to create game');
     } finally {
       setIsCreating(false);
@@ -100,7 +100,7 @@ function LobbyContent() {
       if (!response.ok) throw new Error('Failed to join game');
 
       router.push(`/game/${gameId}`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to join game. Check the code and try again.');
     } finally {
       setIsJoining(false);
@@ -133,7 +133,7 @@ function LobbyContent() {
       }
 
       toast.success('Looking for an opponent...');
-    } catch (error) {
+    } catch {
       toast.error('Failed to join queue');
       setIsQueuing(false);
     }
@@ -184,12 +184,12 @@ function LobbyContent() {
           table: 'games',
           filter: `white_id=eq.${user.id}`,
         },
-        (payload: any) => {
-          const row = payload.new as any;
+        (payload: { new: Record<string, unknown> }) => {
+          const row = payload.new;
           if (row?.status !== 'active') return;
           if (!matchesSelectedTimeControl(row?.time_control)) return;
           if (row?.created_at && row.created_at < since) return;
-          if (row?.id) maybeRedirectToGame(row.id);
+          if (row?.id) maybeRedirectToGame(row.id as string);
         }
       )
       .subscribe();
@@ -204,12 +204,12 @@ function LobbyContent() {
           table: 'games',
           filter: `black_id=eq.${user.id}`,
         },
-        (payload: any) => {
-          const row = payload.new as any;
+        (payload: { new: Record<string, unknown> }) => {
+          const row = payload.new;
           if (row?.status !== 'active') return;
           if (!matchesSelectedTimeControl(row?.time_control)) return;
           if (row?.created_at && row.created_at < since) return;
-          if (row?.id) maybeRedirectToGame(row.id);
+          if (row?.id) maybeRedirectToGame(row.id as string);
         }
       )
       .subscribe();

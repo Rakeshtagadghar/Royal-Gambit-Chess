@@ -119,7 +119,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Calculate stats
-    const solvedPuzzleIds = new Set(results.filter((r) => r.isCorrect).map((r) => r.puzzleId));
     const totalPuzzles = puzzles.length;
     const solvedPuzzles = results.length;
     const correctPuzzles = results.filter((r) => r.isCorrect).length;

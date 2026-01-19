@@ -12,7 +12,7 @@ interface ClockProps {
 
 export function Clock({ color, className }: ClockProps) {
   const { whiteTimeMs, blackTimeMs, boardState, status, decrementTime } = useGameStore();
-  const lastTickRef = useRef<number>(Date.now());
+  const lastTickRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const timeMs = color === 'white' ? whiteTimeMs : blackTimeMs;
@@ -23,11 +23,11 @@ export function Clock({ color, className }: ClockProps) {
   // Timer logic
   useEffect(() => {
     if (isActive && status === 'active') {
-      lastTickRef.current = Date.now();
-      
+      lastTickRef.current = performance.now();
+
       intervalRef.current = setInterval(() => {
-        const now = Date.now();
-        const delta = now - lastTickRef.current;
+        const now = performance.now();
+        const delta = now - (lastTickRef.current ?? now);
         lastTickRef.current = now;
         decrementTime(color === 'white' ? 'w' : 'b', delta);
       }, 100);

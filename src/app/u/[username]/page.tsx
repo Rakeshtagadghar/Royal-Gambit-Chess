@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server';
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileStats } from '@/components/profile/ProfileStats';
 import { GameHistory } from '@/components/profile/GameHistory';
 import { Button } from '@/components/ui/button';
-import { Link } from 'lucide-react';
 import NextLink from 'next/link';
 import { Rating } from '@/types/chess';
 
@@ -72,7 +71,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
         .eq('user_id', profile.id);
 
     // Map ratings to type
-    const ratings: Rating[] = ratingsData?.map((r: any) => ({
+    const ratings: Rating[] = ratingsData?.map((r) => ({
         userId: r.user_id,
         mode: r.mode,
         elo: r.elo,
@@ -85,7 +84,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
     // 5. Fetch Activity (if public or owner)
     const isActivityPublic = profile.is_activity_public;
-    let games: any[] = [];
+    let games: Array<Record<string, unknown>> = [];
 
     if (isActivityPublic || isOwner) {
         const { data: gamesData } = await supabase

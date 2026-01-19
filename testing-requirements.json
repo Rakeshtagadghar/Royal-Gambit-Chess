@@ -1,0 +1,630 @@
+{
+  "spec_version": "1.0.0",
+  "project": {
+    "name": "Royal Gambit Chess",
+    "stack": {
+      "frontend": "Next.js (App Router) + React + TypeScript",
+      "backend": "Next.js Route Handlers (/api/*)",
+      "db": "Supabase Postgres + RLS + Realtime",
+      "auth": "Supabase Auth",
+      "realtime": "Supabase Realtime channels",
+      "webrtc": "WebRTC with Supabase-backed signaling/rooms table"
+    }
+  },
+  "testing_objectives": {
+    "goal": "Provide full automated test coverage across unit, integration, e2e, and security for all implemented features without leaving any function untested.",
+    "quality_gates": {
+      "ci_required": true,
+      "block_merge_on_failure": true,
+      "coverage_thresholds": {
+        "statements": 90,
+        "branches": 85,
+        "functions": 90,
+        "lines": 90
+      },
+      "flakiness_budget": {
+        "max_flaky_tests": 0,
+        "retries": {
+          "unit_integration": 0,
+          "e2e": 1
+        }
+      }
+    }
+  },
+  "test_layers": {
+    "unit": {
+      "framework": "Vitest",
+      "dom": "React Testing Library",
+      "assertions": "@testing-library/jest-dom",
+      "mocking": "vi mocks + MSW where needed",
+      "scope": [
+        "Pure functions",
+        "Hooks",
+        "UI state reducers/stores",
+        "Validation schemas",
+        "Formatting utilities",
+        "Permission checks",
+        "Chess move adapter utilities"
+      ]
+    },
+    "integration": {
+      "framework": "Vitest",
+      "dom": "React Testing Library",
+      "network_mock": "MSW (node) for /api/*",
+      "scope": [
+        "Page-level UI + route handler integration through HTTP (mocked or local server)",
+        "Component trees with providers",
+        "Server actions not applicable (App Router + /api/* only)",
+        "Form flows and optimistic UI",
+        "Error handling paths and boundary rendering"
+      ]
+    },
+    "e2e": {
+      "framework": "Playwright",
+      "browsers": ["chromium"],
+      "device_profiles": ["Desktop Chrome", "Mobile Chrome"],
+      "scope": [
+        "Full user journeys",
+        "Two-user multiplayer flows (two contexts)",
+        "Realtime sync verification",
+        "WebRTC UI gating + signaling happy path (fake media devices)",
+        "Accessibility smoke checks on critical pages"
+      ]
+    },
+    "security_rls": {
+      "framework": "Vitest (node)",
+      "approach": "Run tests against local Supabase DB to validate RLS and permissions",
+      "scope": [
+        "RLS policies per table",
+        "API auth enforcement",
+        "Spectator vs player restrictions",
+        "Rate-limit / abuse guards where implemented"
+      ]
+    },
+    "contract_schema": {
+      "framework": "Vitest",
+      "approach": "Zod schema validation tests for every /api/* request/response",
+      "scope": [
+        "All API request body schemas",
+        "All API response shapes",
+        "Error response contract consistency"
+      ]
+    }
+  },
+  "tooling_setup": {
+    "package_manager": "pnpm",
+    "required_dev_dependencies": [
+      "vitest",
+      "@vitest/coverage-v8",
+      "@testing-library/react",
+      "@testing-library/user-event",
+      "@testing-library/jest-dom",
+      "msw",
+      "whatwg-fetch",
+      "playwright",
+      "eslint-plugin-playwright",
+      "zod",
+      "dotenv"
+    ],
+    "recommended_dev_dependencies": [
+      "@axe-core/playwright",
+      "testcontainers",
+      "cross-env"
+    ],
+    "folder_structure": {
+      "root": [
+        "tests/unit",
+        "tests/integration",
+        "tests/e2e",
+        "tests/security",
+        "tests/contracts",
+        "tests/fixtures",
+        "tests/mocks",
+        "playwright.config.ts",
+        "vitest.config.ts",
+        "msw/handlers.ts",
+        "msw/server.ts"
+      ]
+    },
+    "scripts": {
+      "test:unit": "vitest run --config vitest.config.ts --dir tests/unit",
+      "test:integration": "vitest run --config vitest.config.ts --dir tests/integration",
+      "test:contracts": "vitest run --config vitest.config.ts --dir tests/contracts",
+      "test:security": "vitest run --config vitest.config.ts --dir tests/security",
+      "test:e2e": "playwright test",
+      "test:all": "pnpm test:unit && pnpm test:contracts && pnpm test:integration && pnpm test:security && pnpm test:e2e",
+      "test:ci": "pnpm test:all"
+    },
+    "ci": {
+      "provider": "GitHub Actions",
+      "jobs": [
+        {
+          "name": "unit-contract-integration",
+          "steps": [
+            "install",
+            "lint",
+            "test:unit",
+            "test:contracts",
+            "test:integration",
+            "upload-coverage"
+          ]
+        },
+        {
+          "name": "security-rls",
+          "needs": ["unit-contract-integration"],
+          "steps": [
+            "start-local-supabase",
+            "apply-migrations",
+            "seed-test-data",
+            "test:security"
+          ]
+        },
+        {
+          "name": "e2e",
+          "needs": ["security-rls"],
+          "steps": [
+            "start-next-server",
+            "playwright-install",
+            "test:e2e",
+            "upload-playwright-report"
+          ]
+        }
+      ]
+    }
+  },
+  "global_testing_rules": {
+    "all_functions_must_be_tested": true,
+    "definition_of_function": [
+      "Every exported function in /lib, /utils, /services",
+      "Every hook in /hooks",
+      "Every API handler in /app/api/**/route.ts",
+      "Every client component with non-trivial logic",
+      "Every permission rule and branch",
+      "Every DB write path (insert/update/delete)",
+      "Every realtime handler callback",
+      "Every WebRTC signaling function"
+    ],
+    "test_data_strategy": {
+      "fixtures": [
+        "users: playerA, playerB, spectator",
+        "games: ongoing, finished, abandoned",
+        "invites: pending, accepted, expired",
+        "chat: player-chat, spectator-chat",
+        "learn: tracks, lessons, steps, puzzles",
+        "leaderboard: elo states"
+      ],
+      "id_generation": "Deterministic UUIDs in fixtures",
+      "time": "Use fake timers for clocks; freeze Date.now in unit/integration"
+    },
+    "error_paths_required": true,
+    "accessibility_required": {
+      "e2e_pages": [
+        "Home",
+        "Login",
+        "Play",
+        "Game",
+        "Learn",
+        "Leaderboard",
+        "Profile",
+        "Settings"
+      ],
+      "checks": ["axe-core critical+serious only"]
+    }
+  },
+  "modules_to_test": [
+    {
+      "module": "Authentication",
+      "scope": [
+        "Login UI",
+        "Signup UI",
+        "Logout",
+        "Session persistence",
+        "Auth-protected API routes",
+        "Auth-protected pages"
+      ],
+      "unit_tests": [
+        "Auth state hook: handles signed-in/signed-out transitions",
+        "Token/session parsing utilities",
+        "Route guard utilities: redirect logic and allow-list"
+      ],
+      "integration_tests": [
+        "Login form submits to /api/auth/login and handles success redirect",
+        "Login error shows correct UI message",
+        "Signup form submits to /api/auth/signup and handles email verification flow if present",
+        "Protected page denies access when no session"
+      ],
+      "e2e_tests": [
+        "User can sign up (or sign in) and land on Play",
+        "User can sign out and is redirected",
+        "Unauthorized API call returns 401/403"
+      ]
+    },
+    {
+      "module": "Play Page - Invitations",
+      "scope": [
+        "Create invitation",
+        "Sent invitations list",
+        "Received invitations list",
+        "Accept/Decline invitation",
+        "Join from invitations",
+        "Expire invitations"
+      ],
+      "unit_tests": [
+        "Invitation status mapper (pending/accepted/declined/expired)",
+        "UI selectors for invitation filtering and sorting",
+        "Time-to-expiry calculation"
+      ],
+      "integration_tests": [
+        "Create invitation calls /api/invites/create and updates Sent list",
+        "Sent invitations show correct state transitions after accept/decline",
+        "Accept invitation creates game and navigates to game page",
+        "Decline invitation removes/updates invite correctly",
+        "Error states: network failure, unauthorized, validation error"
+      ],
+      "e2e_tests": [
+        "PlayerA sends invite to PlayerB; PlayerB accepts; both enter same game",
+        "PlayerB declines invite; PlayerA sees declined status",
+        "Expired invite cannot be accepted"
+      ]
+    },
+    {
+      "module": "Game - PvP Core",
+      "scope": [
+        "Board rendering",
+        "High-quality move animations",
+        "Move validation and submission",
+        "Realtime sync between two players",
+        "Game clocks/time controls",
+        "Resign/Draw/Abort",
+        "Game end (checkmate/stalemate/timeout)",
+        "PGN/FEN persistence"
+      ],
+      "unit_tests": [
+        "Chess state adapter: apply move updates FEN/turn",
+        "Move notation formatting (SAN/uci mapping if used)",
+        "Clock tick logic including increment/delay",
+        "End condition detector mapping to UI state",
+        "Persistence mapper: match row <-> domain model"
+      ],
+      "integration_tests": [
+        "Submitting a legal move calls /api/game/move and updates UI",
+        "Illegal move rejected and UI shows message",
+        "Game end modal appears on checkmate/stalemate",
+        "Clock stops when game finished",
+        "Resign calls /api/game/resign and updates result"
+      ],
+      "e2e_tests": [
+        "Two users: move by PlayerA appears for PlayerB with animation",
+        "Timeout path: force time fast-forward and verify winner",
+        "Resign flow works and game result saved"
+      ]
+    },
+    {
+      "module": "Game - User vs Bot",
+      "scope": [
+        "Start bot match",
+        "Bot move generation",
+        "Difficulty selection",
+        "Bot timing/animation",
+        "Result persistence"
+      ],
+      "unit_tests": [
+        "Bot move selection wrapper returns legal move",
+        "Difficulty config mapping",
+        "Bot think-time scheduler"
+      ],
+      "integration_tests": [
+        "Starting bot game calls /api/bot/start and opens game",
+        "After player move, bot responds via /api/bot/move and UI updates",
+        "Bot move failure shows fallback UI"
+      ],
+      "e2e_tests": [
+        "User plays bot: user move triggers bot reply",
+        "Finish bot game and verify result recorded"
+      ]
+    },
+    {
+      "module": "Realtime Subscriptions",
+      "scope": [
+        "Subscribe to game events",
+        "Subscribe to chat events",
+        "Reconnect logic",
+        "Deduplication/idempotency",
+        "Presence (if used)"
+      ],
+      "unit_tests": [
+        "Realtime adapter: subscribes/unsubscribes cleanly",
+        "Event reducer handles all event types",
+        "Dedup logic prevents double-apply"
+      ],
+      "integration_tests": [
+        "Simulated realtime event updates board state",
+        "Reconnect triggers resubscription without duplicating listeners",
+        "Out-of-order events handled safely"
+      ],
+      "e2e_tests": [
+        "Kill network briefly then restore; game continues and syncs",
+        "No duplicate moves after refresh"
+      ]
+    },
+    {
+      "module": "In-Game Chat (Players + Spectators)",
+      "scope": [
+        "Players chat",
+        "Spectator chat in ongoing game view",
+        "Message ordering",
+        "Rate limiting/anti-spam (if present)",
+        "Moderation flags (if present)"
+      ],
+      "unit_tests": [
+        "Chat message formatter (timestamps, user display)",
+        "Message list reducer (append, dedup, sort)",
+        "Permission checks for who can send messages where"
+      ],
+      "integration_tests": [
+        "Player sends message -> /api/chat/send -> appears in feed",
+        "Spectator can join ongoing game chat and message appears",
+        "Unauthorized user blocked from sending",
+        "Message sanitization and max length enforced"
+      ],
+      "e2e_tests": [
+        "PlayerA and PlayerB chat during match",
+        "Spectator joins and chats; players see it",
+        "Spectator cannot access player-only controls"
+      ]
+    },
+    {
+      "module": "WebRTC Video/Audio Chat v1 (Players Only)",
+      "scope": [
+        "Room join/leave",
+        "Signaling via existing webrtc_rooms table + APIs",
+        "Player-only gating",
+        "UI states: connecting/connected/disconnected",
+        "Device permissions prompts",
+        "Mute/unmute, camera toggle"
+      ],
+      "unit_tests": [
+        "Role gating: only player1/player2 can initialize WebRTC",
+        "Signaling payload schemas validation",
+        "UI state machine: idle->connecting->connected->failed->disconnected",
+        "Cleanup: stop tracks, close peer connection"
+      ],
+      "integration_tests": [
+        "Join room calls /api/webrtc/join and transitions UI state",
+        "Offer/answer exchange through mocked API + updates state",
+        "Leave room calls /api/webrtc/leave and cleans UI",
+        "Spectator cannot call join APIs (403)"
+      ],
+      "e2e_tests": [
+        "Two contexts: player1 starts video and player2 connects (fake media)",
+        "Spectator sees no video controls but sees chat",
+        "Player toggles mute/camera updates UI"
+      ]
+    },
+    {
+      "module": "Ongoing Games View (Spectator Mode)",
+      "scope": [
+        "List ongoing games",
+        "Open game in spectator mode",
+        "Live board updates",
+        "Spectator chat enabled",
+        "Video hidden"
+      ],
+      "unit_tests": [
+        "Ongoing game list sorting and filtering",
+        "Spectator mode detection and UI gating"
+      ],
+      "integration_tests": [
+        "Ongoing games list loads via /api/games/ongoing",
+        "Spectator opens game -> board loads and subscribes to realtime",
+        "Spectator chat works; video controls not rendered"
+      ],
+      "e2e_tests": [
+        "Spectator watches active match and sees moves live",
+        "Spectator posts chat message"
+      ]
+    },
+    {
+      "module": "Leaderboards (ELO)",
+      "scope": [
+        "Leaderboard list",
+        "Sorting + pagination",
+        "Click name -> profile page",
+        "Rank calculation",
+        "ELO updates after match"
+      ],
+      "unit_tests": [
+        "ELO delta computation",
+        "Rank computation (ties and ordering)",
+        "Pagination math"
+      ],
+      "integration_tests": [
+        "Leaderboard loads from /api/leaderboard",
+        "After game finish, leaderboard reflects new ratings",
+        "Clicking username navigates correctly"
+      ],
+      "e2e_tests": [
+        "Leaderboard shows player and updated rating after match",
+        "Click username opens profile page"
+      ]
+    },
+    {
+      "module": "Profile Page + Settings Entry",
+      "scope": [
+        "Profile page for self",
+        "Public profile page by id/username",
+        "Stats: ELO, games played, wins/losses/draws, streaks (if present)",
+        "Recent games list",
+        "Accessed via settings and leaderboard click"
+      ],
+      "unit_tests": [
+        "Profile data mapper from API response",
+        "Privacy rules (what is public vs private)"
+      ],
+      "integration_tests": [
+        "Settings -> Profile navigation works",
+        "Leaderboard click -> Profile route loads and renders stats",
+        "Profile loads from /api/profile/:id with correct caching rules"
+      ],
+      "e2e_tests": [
+        "Logged-in user opens own profile from settings",
+        "Visitor opens public profile from leaderboard"
+      ]
+    },
+    {
+      "module": "Learn / Tutorials / Tracks",
+      "scope": [
+        "Tracks list by level (beginner->expert)",
+        "Lessons list inside track",
+        "Lesson step renderer types: explain, move_task, puzzle, quiz, model_line",
+        "Progress saving",
+        "Unlock rules / prerequisites",
+        "Practice packs + puzzles",
+        "Board interactions within lessons"
+      ],
+      "unit_tests": [
+        "Step type renderer router selects correct component",
+        "Move_task validator checks required_move_uci",
+        "Quiz evaluator and scoring",
+        "Puzzle solution validator compares line",
+        "Progress engine: completion %, unlock calculation",
+        "Markdown rendering safety (sanitization if used)"
+      ],
+      "integration_tests": [
+        "Track list loads /api/learn/tracks",
+        "Open lesson loads /api/learn/lesson/:slug and renders steps",
+        "Completing step saves progress via /api/learn/progress",
+        "Prerequisite prevents access to locked content",
+        "Practice pack runs through puzzles and records attempts"
+      ],
+      "e2e_tests": [
+        "User completes a beginner lesson and progress persists after refresh",
+        "User runs a practice pack and sees results summary"
+      ]
+    },
+    {
+      "module": "API Routes (/api/*) - Full Coverage",
+      "scope": [
+        "Every route handler must have: success tests, validation tests, auth tests, permission tests, error tests"
+      ],
+      "requirements": {
+        "for_each_route": [
+          "200/201 success path",
+          "400 invalid input path",
+          "401 unauthenticated path",
+          "403 unauthorized role path",
+          "404 not found path where applicable",
+          "409 conflict path where applicable",
+          "429 rate limit path if implemented",
+          "500 internal error handling path"
+        ],
+        "contract_tests_required": true,
+        "schema_validation": "All routes must use Zod schemas for req/res and be tested"
+      }
+    },
+    {
+      "module": "Database + RLS Policy Tests",
+      "scope": [
+        "All tables involved in features: users/profiles, matches/games, invites, chat_messages, webrtc_rooms, learn_* tables, leaderboard materialized views (if any)"
+      ],
+      "tests": [
+        "PlayerA can read own invites; cannot read PlayerB private invites",
+        "PlayerA can write moves only to own match",
+        "Spectator cannot write moves",
+        "Spectator can insert chat in ongoing game only if allowed",
+        "Only players can create/join webrtc room entries",
+        "Learn progress rows only writable by owning user",
+        "Leaderboard readable by all"
+      ]
+    },
+    {
+      "module": "UI State / Error Handling / Loading",
+      "scope": [
+        "All loading spinners/skeletons",
+        "All empty states",
+        "All error boundaries",
+        "Toasts/alerts",
+        "Offline handling",
+        "Retry interactions"
+      ],
+      "unit_tests": [
+        "Toast manager / notification reducer",
+        "Error boundary fallback renderer"
+      ],
+      "integration_tests": [
+        "API error renders correct empty/error state",
+        "Retry triggers refetch and success state",
+        "Offline mode disables actions"
+      ],
+      "e2e_tests": [
+        "Force API failure and confirm user sees recoverable message",
+        "Retry recovers after MSW flips to success"
+      ]
+    },
+    {
+      "module": "Accessibility + Keyboard",
+      "scope": [
+        "Keyboard navigation",
+        "Focus management on modals",
+        "ARIA labels on inputs/buttons",
+        "Color contrast checks where possible"
+      ],
+      "tests": [
+        "Playwright + axe scan on critical pages",
+        "Keyboard-only flow: login -> play -> open modal -> close modal",
+        "Ensure game chat input is reachable and usable"
+      ]
+    },
+    {
+      "module": "Performance Smoke Tests",
+      "scope": [
+        "Bundle size regression check (optional)",
+        "Core page load timing smoke",
+        "Board rendering does not freeze on move spam"
+      ],
+      "tests": [
+        "Playwright trace-based performance smoke",
+        "Simulate 50 moves and ensure UI remains responsive",
+        "No console errors during navigation"
+      ]
+    }
+  ],
+  "implementation_deliverables": {
+    "configs": [
+      "vitest.config.ts configured for Next.js + TS + coverage",
+      "playwright.config.ts with baseURL and projects",
+      "msw/server.ts and msw/handlers.ts covering all /api/* endpoints",
+      "global test setup to include jest-dom and fetch polyfills"
+    ],
+    "helpers": [
+      "tests/fixtures/factories for users, games, invites, lessons, rooms",
+      "tests/mocks/supabaseAdminClient mock for unit tests",
+      "tests/utils/renderWithProviders for RTL",
+      "tests/utils/authSessionMock for simulating logged-in user",
+      "tests/utils/timeMock for clock tests",
+      "tests/utils/realtimeMockBus for realtime adapter tests"
+    ],
+    "e2e_infra": [
+      "Playwright auth storageState for playerA, playerB, spectator",
+      "Two-context helpers to run multiplayer scenarios",
+      "Fake media device setup flags for WebRTC tests",
+      "Trace + video enabled on failure"
+    ],
+    "coverage_reports": [
+      "coverage/lcov.info for CI",
+      "playwright-report for E2E",
+      "junit xml outputs (optional)"
+    ]
+  },
+  "acceptance_criteria": [
+    "All exported functions, hooks, route handlers, reducers, and service modules have direct tests.",
+    "All API routes have full matrix tests (success + errors + auth + permissions).",
+    "All realtime flows are validated (unit mocks + at least one E2E sync test).",
+    "All WebRTC gating is validated (unit + integration) and basic connection UI tested in E2E with fake media.",
+    "All learn track flows are tested end-to-end including progress persistence.",
+    "All leaderboard and profile navigation flows are tested and rating updates verified after a match.",
+    "RLS policy tests pass for every relevant table and role.",
+    "CI pipeline runs all tests and enforces coverage thresholds.",
+    "No flaky tests; e2e retries at most once, and failures produce trace artifacts."
+  ]
+}

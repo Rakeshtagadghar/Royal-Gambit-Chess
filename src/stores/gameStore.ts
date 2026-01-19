@@ -1,11 +1,10 @@
 import { create } from 'zustand';
-import { Chess, Square, Move as ChessMove, Color, PieceSymbol } from 'chess.js';
+import { Chess, Square, Color, PieceSymbol } from 'chess.js';
 import { 
   Game, 
   GameMode, 
   GameStatus, 
   GameResult, 
-  Move, 
   TimeControl,
   BotDifficulty,
   GameTermination,
@@ -168,7 +167,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   makeMove: (from, to, promotion) => {
-    const { game, status, boardState } = get();
+    const { game, status } = get();
     
     if (status !== 'active') return false;
     
@@ -298,7 +297,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   viewMove: (index) => {
-    const { boardState, game } = get();
+    const { boardState } = get();
     const maxIndex = boardState.moveHistory.length - 1;
     const newIndex = Math.max(-1, Math.min(index, maxIndex));
     set({ viewingMoveIndex: newIndex, selectedSquare: null, highlightedSquares: [] });

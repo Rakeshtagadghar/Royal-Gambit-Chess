@@ -7,12 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useSettingsStore, BOARD_THEMES, BoardTheme } from '@/stores/settingsStore';
-import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Settings, Palette, Volume2, Eye, RotateCcw } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { profile } = useAuth();
   const {
     boardTheme,
     showLegalMoves,

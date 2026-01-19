@@ -56,7 +56,6 @@ export function GameHistory({ games, currentUserId }: GameHistoryProps) {
                     <div className="space-y-4">
                         {games.map((game) => {
                             const isWhite = game.player_white === currentUserId;
-                            const color = isWhite ? 'white' : 'black';
                             const isWin = game.winner_user_id === currentUserId;
                             const isDraw = game.result === 'draw';
                             const resultText = isWin ? 'Won' : isDraw ? 'Draw' : 'Lost';

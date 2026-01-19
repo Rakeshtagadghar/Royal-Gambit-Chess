@@ -7,8 +7,6 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea'; // Assuming this exists or I'll use textarea
-import { Switch } from '@/components/ui/switch'; // Check if exists, otherwise checkbox
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { toast } from 'sonner';

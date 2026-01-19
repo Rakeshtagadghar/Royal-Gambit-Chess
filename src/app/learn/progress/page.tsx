@@ -57,6 +57,7 @@ export default function ProgressPage() {
     if (user) {
       loadProgress();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   async function loadProgress() {

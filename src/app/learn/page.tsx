@@ -58,6 +58,7 @@ export default function LearnHubPage() {
     if (isAuthenticated) {
       loadLearnHub();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   if (!isAuthenticated) {

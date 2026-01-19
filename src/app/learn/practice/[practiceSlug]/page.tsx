@@ -12,7 +12,6 @@ import { LessonBoard } from '@/components/learn';
 import { useLearnStore, usePracticeStore } from '@/stores/learnStore';
 import {
   LearnPracticePack,
-  LearnPuzzle,
   LEVEL_LABELS,
   LEVEL_COLORS,
   TOPIC_LABELS,
@@ -67,6 +66,7 @@ export default function PracticePackPage() {
   useEffect(() => {
     loadPracticePack();
     return () => resetPractice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [practiceSlug]);
 
   async function loadPracticePack() {
@@ -114,6 +114,7 @@ export default function PracticePackPage() {
       // Save result to database via API
       saveResult(currentPuzzle.id, attempts === 0, attempts + 1, timeMs);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepCompleted]);
 
   async function saveResult(

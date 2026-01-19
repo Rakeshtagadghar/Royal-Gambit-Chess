@@ -2,7 +2,7 @@
 
 import Script from "next/script";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, Suspense, useState } from "react";
+import { useEffect, Suspense } from "react";
 import { GA_MEASUREMENT_ID, pageview } from "@/lib/analytics/gtag";
 import { useCookieConsent } from "@/components/cookies/CookieConsent";
 
@@ -23,13 +23,6 @@ function GoogleAnalyticsTracker() {
 
 export function GoogleAnalytics() {
   const { hasAnalyticsConsent, isLoaded } = useCookieConsent();
-  const [initialized, setInitialized] = useState(false);
-
-  useEffect(() => {
-    if (hasAnalyticsConsent && !initialized) {
-      setInitialized(true);
-    }
-  }, [hasAnalyticsConsent, initialized]);
 
   if (!GA_MEASUREMENT_ID || !isLoaded || !hasAnalyticsConsent) {
     return null;

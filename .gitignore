@@ -41,3 +41,17 @@ yarn-error.log*
 next-env.d.ts
 .claude
 .claude/settings.local.json
+
+# playwright
+/tests/e2e/.auth/
+/playwright-report/
+/test-results/
+playwright-results.xml
+
+# supabase (keep migrations and seed files, ignore local state)
+.branches
+.temp
+.env.test.local
+create-env.bat
+create-env.sh
+/playwright-report/

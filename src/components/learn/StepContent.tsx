@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Chess, Square, PieceSymbol } from 'chess.js';
+import { Square, PieceSymbol } from 'chess.js';
 import { useLearnStore } from '@/stores/learnStore';
 import { QuizCard } from './QuizCard';
 import { HintPanel } from './HintPanel';
@@ -71,13 +71,14 @@ function ModelLinePlayer() {
   const solutionLine = step?.solutionLineUci || [];
 
   const playNextMove = useCallback(() => {
-    if (moveIndex >= solutionLine.length) {
+    const currentSolutionLine = step?.solutionLineUci || [];
+    if (moveIndex >= currentSolutionLine.length) {
       setIsPlaying(false);
       markStepComplete();
       return;
     }
 
-    const moveUci = solutionLine[moveIndex];
+    const moveUci = currentSolutionLine[moveIndex];
     const from = moveUci.slice(0, 2) as Square;
     const to = moveUci.slice(2, 4) as Square;
     const promotion = moveUci[4] as PieceSymbol | undefined;
@@ -89,7 +90,8 @@ function ModelLinePlayer() {
     } catch {
       // Invalid move
     }
-  }, [game, moveIndex, solutionLine, markStepComplete]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [moveIndex, markStepComplete, step?.solutionLineUci]);
 
   const playAll = useCallback(() => {
     setIsPlaying(true);
@@ -124,7 +126,7 @@ function ModelLinePlayer() {
     }, 800);
 
     return () => clearInterval(interval);
-  }, [game, markStepComplete]);
+  }, [markStepComplete]);
 
   const resetLine = useCallback(() => {
     const initialFen = step?.initialFen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
