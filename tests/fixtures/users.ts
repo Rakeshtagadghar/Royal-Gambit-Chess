@@ -112,7 +112,7 @@ export const mockProfiles: Record<string, Profile> = {
     id: USER_IDS.spectator,
     username: 'spectator',
     displayName: 'Spectator User',
-    avatarUrl: null,
+    avatarUrl: undefined,
     bio: 'I just watch',
     countryCode: 'CA',
     isProfilePublic: true,

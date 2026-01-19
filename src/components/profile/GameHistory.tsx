@@ -17,7 +17,7 @@ function formatTimeAgo(dateString: string) {
     return date.toLocaleDateString();
 }
 
-interface MatchResult {
+export interface MatchResult {
     game_id: string;
     player_white: string;
     player_black: string;

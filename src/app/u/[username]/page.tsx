@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ProfileStats } from '@/components/profile/ProfileStats';
-import { GameHistory } from '@/components/profile/GameHistory';
+import { GameHistory, MatchResult } from '@/components/profile/GameHistory';
 import { Button } from '@/components/ui/button';
 import NextLink from 'next/link';
 import { Rating } from '@/types/chess';
@@ -84,7 +84,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
     // 5. Fetch Activity (if public or owner)
     const isActivityPublic = profile.is_activity_public;
-    let games: Array<Record<string, unknown>> = [];
+    let games: MatchResult[] = [];
 
     if (isActivityPublic || isOwner) {
         const { data: gamesData } = await supabase
