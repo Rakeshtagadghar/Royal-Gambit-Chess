@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { CachedAvatarImage } from '@/components/ui/cached-avatar-image';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
@@ -126,7 +127,7 @@ export default function LeaderboardPage() {
                     <div className="flex items-center gap-4">
                       <div className="text-2xl font-bold text-primary">#{userRank.rank}</div>
                       <Avatar className="h-10 w-10 border-2 border-primary">
-                        <AvatarImage src={userRank.avatarUrl} alt={userRank.username} />
+                        <CachedAvatarImage src={userRank.avatarUrl} alt={userRank.username} />
                         <AvatarFallback>{userRank.username.slice(0, 2).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div>
@@ -198,7 +199,7 @@ export default function LeaderboardPage() {
                         </div>
                         <div className="col-span-5 flex items-center gap-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={entry.avatarUrl} alt={entry.username} />
+                            <CachedAvatarImage src={entry.avatarUrl} alt={entry.username} />
                             <AvatarFallback className="text-xs">
                               {entry.username.slice(0, 2).toUpperCase()}
                             </AvatarFallback>

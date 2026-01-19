@@ -6,7 +6,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { CachedAvatarImage } from '@/components/ui/cached-avatar-image';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -180,7 +181,7 @@ export default function ProfilePage() {
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row items-center gap-6">
                 <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile.avatarUrl} alt={profile.username} />
+                  <CachedAvatarImage src={profile.avatarUrl} alt={profile.username} />
                   <AvatarFallback className="text-3xl">
                     {profile.username.slice(0, 2).toUpperCase()}
                   </AvatarFallback>

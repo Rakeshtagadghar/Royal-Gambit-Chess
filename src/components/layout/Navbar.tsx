@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { CachedAvatarImage } from '@/components/ui/cached-avatar-image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,7 +97,7 @@ export function Navbar() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage
+                      <CachedAvatarImage
                         src={profile?.avatarUrl || userMetaPicture || undefined}
                         alt={profile?.username || user?.email || 'User'}
                       />

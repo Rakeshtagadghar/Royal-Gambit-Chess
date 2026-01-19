@@ -2,7 +2,8 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { CachedAvatarImage } from '@/components/ui/cached-avatar-image';
 import { Badge } from '@/components/ui/badge';
 import { Clock } from './Clock';
 import { CapturedPieces } from './CapturedPieces';
@@ -46,7 +47,7 @@ export function PlayerCard({
     >
       <div className="relative">
         <Avatar className="h-12 w-12">
-          <AvatarImage src={avatarUrl} alt={username} />
+          <CachedAvatarImage src={avatarUrl} alt={username} />
           <AvatarFallback className={cn(
             'text-lg font-bold',
             color === 'white' ? 'bg-gray-100 text-gray-900' : 'bg-gray-900 text-gray-100'

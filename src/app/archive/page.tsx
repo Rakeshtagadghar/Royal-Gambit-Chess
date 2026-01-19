@@ -35,13 +35,18 @@ interface GameRecord {
 }
 
 export default function ArchivePage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isInitialized } = useAuth();
   const [games, setGames] = useState<GameRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 });
 
   useEffect(() => {
     const fetchGames = async () => {
+      // Wait for auth to initialize before making decisions
+      if (!isInitialized) {
+        return;
+      }
+
       if (!isAuthenticated || !user) {
         setIsLoading(false);
         return;
@@ -82,7 +87,7 @@ export default function ArchivePage() {
     };
 
     fetchGames();
-  }, [isAuthenticated, user]);
+  }, [isInitialized, isAuthenticated, user]);
 
   const formatTimeControl = (tc: { baseMs: number; incrementMs: number }) => {
     const minutes = tc.baseMs / 60000;
