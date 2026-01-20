@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -13,40 +13,33 @@ type ConsentType = "all" | "essential" | "rejected" | null;
 
 export function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false);
-  const [consent, setConsent] = useState<ConsentType>(() => {
-    if (globalThis.window === undefined) return null;
-    return localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType;
-  });
 
   useEffect(() => {
-    if (consent === null) {
+    // Read localStorage only after mount to avoid hydration mismatch
+    const stored = localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType;
+
+    if (stored === null) {
       // Delay showing banner for better UX
       const timer = setTimeout(() => setShowBanner(true), 1000);
       return () => clearTimeout(timer);
     }
-  }, [consent]);
+  }, []);
 
   const acceptAll = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "all");
-    setConsent("all");
     setShowBanner(false);
-    // Update Google Consent Mode
     updateGoogleConsent("all");
   };
 
   const acceptEssential = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "essential");
-    setConsent("essential");
     setShowBanner(false);
-    // Update Google Consent Mode - allows analytics, denies ads/personalization
     updateGoogleConsent("essential");
   };
 
   const rejectAll = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "rejected");
-    setConsent("rejected");
     setShowBanner(false);
-    // Update Google Consent Mode - denies all non-essential cookies
     updateGoogleConsent("rejected");
   };
 
@@ -122,29 +115,31 @@ export function CookieConsent() {
   );
 }
 
+// Subscribe to localStorage changes
+function subscribeToConsent(callback: () => void) {
+  globalThis.addEventListener("storage", callback);
+  return () => globalThis.removeEventListener("storage", callback);
+}
+
+function getConsentSnapshot(): ConsentType {
+  return localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType;
+}
+
+function getConsentServerSnapshot(): ConsentType {
+  return null;
+}
+
 // Hook to check consent status
 export function useCookieConsent() {
-  const getStoredConsent = () => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType;
-  };
-
-  const [consent, setConsent] = useState<ConsentType>(getStoredConsent);
-  const [isLoaded] = useState(() => typeof window !== "undefined");
-
-  useEffect(() => {
-    // Listen for consent changes from other components/tabs
-    const handleStorageChange = () => {
-      setConsent(localStorage.getItem(COOKIE_CONSENT_KEY) as ConsentType);
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  const consent = useSyncExternalStore(
+    subscribeToConsent,
+    getConsentSnapshot,
+    getConsentServerSnapshot
+  );
 
   return {
     consent,
-    isLoaded,
+    isLoaded: true,
     hasFullConsent: consent === "all",
     hasAnalyticsConsent: consent === "all" || consent === "essential",
     hasEssentialConsent: consent !== null,
