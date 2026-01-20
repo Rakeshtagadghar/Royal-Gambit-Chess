@@ -473,11 +473,14 @@ export function createMoveAnalysis(
   };
 }
 
+let gameAnalysisCounter = 0;
+
 export function createGameAnalysis(
   overrides: Partial<GameAnalysis> = {}
 ): GameAnalysis {
+  gameAnalysisCounter++;
   return {
-    game_id: `game-${Date.now()}`,
+    game_id: `game-${Date.now()}-${gameAnalysisCounter}`,
     status: 'done',
     engine_name: 'stockfish',
     engine_version: '16.1',
