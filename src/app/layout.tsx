@@ -35,6 +35,9 @@ export const metadata: Metadata = {
   title: "RoyalGambit - Play Chess Online",
   description: "A modern chess platform. Play against bots, friends, or find opponents online.",
   keywords: ["chess", "online chess", "play chess", "chess game", "stockfish"],
+  other: {
+    'google-adsense-account': process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || '',
+  },
 };
 
 export default function RootLayout({
