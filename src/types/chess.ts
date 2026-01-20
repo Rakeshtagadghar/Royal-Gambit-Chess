@@ -179,3 +179,96 @@ export interface CreateGameOptions {
   botDifficulty?: BotDifficulty;
 }
 
+// Game Review Types
+export type AnalysisStatus = 'not_requested' | 'pending' | 'processing' | 'done' | 'failed';
+export type MoveClassification = 'best' | 'good' | 'inaccuracy' | 'mistake' | 'blunder';
+export type EvalType = 'cp' | 'mate';
+
+export interface Evaluation {
+  type: EvalType;
+  value: number;
+}
+
+export interface MoveAnalysis {
+  ply: number;
+  played_move_uci: string;
+  played_move_san: string;
+  best_move_uci: string;
+  best_move_san: string;
+  eval_before: Evaluation;
+  eval_after: Evaluation;
+  eval_loss_cp: number;
+  classification: MoveClassification;
+  pv: string[];
+}
+
+export interface PlayerAnalysisSummary {
+  accuracy: number;
+  acpl: number;
+  blunders: number;
+  mistakes: number;
+  inaccuracies: number;
+}
+
+export interface GameAnalysisSummary {
+  engine_name: string;
+  engine_version: string;
+  analysis_depth: number;
+  time_per_move_ms: number;
+  completed_at: string | null;
+  white: PlayerAnalysisSummary;
+  black: PlayerAnalysisSummary;
+}
+
+export interface GameReviewResponse {
+  status: AnalysisStatus;
+  game_id: string;
+  analysis?: GameAnalysisSummary;
+  moves?: MoveAnalysis[];
+  // For processing status
+  started_at?: string;
+  progress?: {
+    current_ply: number;
+    total_plies: number;
+    percentage: number;
+  };
+  // For pending status
+  queued_at?: string;
+  queue_position?: number;
+  // For not_requested status
+  message?: string;
+}
+
+export interface QueueAnalysisResponse {
+  success: boolean;
+  status?: AnalysisStatus;
+  game_id?: string;
+  queued_at?: string;
+  message?: string;
+  error?: string;
+  code?: string;
+}
+
+// Classification thresholds in centipawns
+export const CLASSIFICATION_THRESHOLDS = {
+  best: 20,
+  good: 50,
+  inaccuracy: 150,
+  mistake: 300,
+} as const;
+
+export function classifyMove(evalLossCp: number): MoveClassification {
+  if (evalLossCp <= CLASSIFICATION_THRESHOLDS.best) return 'best';
+  if (evalLossCp <= CLASSIFICATION_THRESHOLDS.good) return 'good';
+  if (evalLossCp <= CLASSIFICATION_THRESHOLDS.inaccuracy) return 'inaccuracy';
+  if (evalLossCp <= CLASSIFICATION_THRESHOLDS.mistake) return 'mistake';
+  return 'blunder';
+}
+
+// Lichess-style accuracy formula
+export function calculateAccuracy(acpl: number): number {
+  if (acpl < 0) return 100;
+  const accuracy = 103.1668 * Math.exp(-0.04354 * acpl) - 3.1669;
+  return Math.max(0, Math.min(100, accuracy));
+}
+

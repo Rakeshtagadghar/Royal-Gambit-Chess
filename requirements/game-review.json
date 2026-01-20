@@ -1,0 +1,180 @@
+{
+  "feature": "fast_game_review",
+  "version": "1.0",
+  "objective": "Provide a fast, deterministic game review using Stockfish analysis, computed once per game and cached for all future views.",
+  "scope": {
+    "analysis_type": "fast",
+    "engine": {
+      "name": "stockfish",
+      "mode": "uci",
+      "execution": "server_or_edge_worker",
+      "settings": {
+        "depth": 12,
+        "time_per_move_ms": 100,
+        "multipv": 1,
+        "contempt": 0
+      }
+    },
+    "supported_modes": ["pvp", "bot"],
+    "supported_time_controls": ["bullet", "blitz", "rapid", "classical"]
+  },
+  "trigger_conditions": {
+    "automatic": {
+      "on_game_finish": true,
+      "game_status_required": "finished"
+    },
+    "manual": {
+      "via_ui": true,
+      "locations": ["game_end_screen", "archive_page"]
+    }
+  },
+  "data_sources": {
+    "games": {
+      "fields": ["id", "initial_fen", "pgn", "white_id", "black_id", "result"]
+    },
+    "moves": {
+      "fields": ["game_id", "ply", "uci", "san", "fen_after"]
+    }
+  },
+  "storage_model": {
+    "game_analysis": {
+      "primary_key": "game_id",
+      "fields": {
+        "status": ["pending", "processing", "done", "failed"],
+        "engine_name": "string",
+        "engine_version": "string",
+        "analysis_depth": "number",
+        "time_per_move_ms": "number",
+        "analysis_hash": "string",
+        "white_accuracy": "number",
+        "black_accuracy": "number",
+        "white_acpl": "number",
+        "black_acpl": "number",
+        "white_blunders": "number",
+        "white_mistakes": "number",
+        "white_inaccuracies": "number",
+        "black_blunders": "number",
+        "black_mistakes": "number",
+        "black_inaccuracies": "number",
+        "created_at": "timestamp",
+        "completed_at": "timestamp"
+      }
+    },
+    "move_analysis": {
+      "unique_key": ["game_id", "ply"],
+      "fields": {
+        "ply": "number",
+        "played_move_uci": "string",
+        "best_move_uci": "string",
+        "eval_cp": "number|null",
+        "mate_in": "number|null",
+        "eval_loss_cp": "number",
+        "classification": ["best", "good", "inaccuracy", "mistake", "blunder"],
+        "pv_uci": "string|null"
+      }
+    }
+  },
+  "analysis_algorithm": {
+    "per_move": [
+      "Set position from initial_fen",
+      "Replay moves sequentially",
+      "For each ply:",
+      " - run Stockfish analysis",
+      " - capture best move + evaluation",
+      " - calculate eval_loss_cp vs played move",
+      " - classify move based on thresholds"
+    ],
+    "classification_thresholds_cp": {
+      "best": "<= 20",
+      "good": "<= 50",
+      "inaccuracy": "<= 150",
+      "mistake": "<= 300",
+      "blunder": "> 300"
+    },
+    "accuracy_formula": {
+      "method": "lichess_style_weighted",
+      "description": "Accuracy derived from eval_loss_cp using exponential decay"
+    }
+  },
+  "caching_rules": {
+    "hash_inputs": [
+      "initial_fen",
+      "pgn",
+      "engine_version",
+      "analysis_settings"
+    ],
+    "reanalysis_conditions": [
+      "analysis_hash mismatch",
+      "analysis_settings changed",
+      "explicit_admin_trigger"
+    ],
+    "default_behavior": "serve_cached_only"
+  },
+  "api_contracts": {
+    "enqueue_analysis": {
+      "method": "POST",
+      "path": "/api/game-review/queue",
+      "auth": "service_or_authenticated",
+      "idempotent": true
+    },
+    "get_review": {
+      "method": "GET",
+      "path": "/api/games/{gameId}/review",
+      "responses": {
+        "done": {
+          "game_summary": "game_analysis",
+          "moves": "move_analysis[]"
+        },
+        "processing": {
+          "status": "processing"
+        },
+        "queued": {
+          "status": "queued"
+        }
+      }
+    }
+  },
+  "ui_requirements": {
+    "entry_points": [
+      {
+        "location": "game_end_screen",
+        "label": "Game Review",
+        "visible_when": "game.status == finished"
+      },
+      {
+        "location": "archive_game_row",
+        "label": "Review",
+        "badge_states": ["ready", "processing"]
+      }
+    ],
+    "review_page": {
+      "sections": [
+        "overall_summary",
+        "accuracy_comparison",
+        "move_by_move_timeline",
+        "blunder_mistake_markers"
+      ],
+      "interactions": ["click_move_to_jump_board", "toggle_best_move_arrow"]
+    }
+  },
+  "performance_expectations": {
+    "avg_game_length_moves": 60,
+    "analysis_time_per_game_seconds": {
+      "expected": 5,
+      "max": 10
+    },
+    "daily_volume_supported": 100,
+    "realtime_requirement": false
+  },
+  "security": {
+    "read_access": "participants + public_finished_games",
+    "write_access": "service_role_only",
+    "rls_enforced": true
+  },
+  "future_extensions": {
+    "deep_review": "higher_depth_variant",
+    "ai_commentary": "optional_llm_layer",
+    "opening_detection": "eco_lookup",
+    "mistake_explanations": "rule_based_or_ai"
+  }
+}

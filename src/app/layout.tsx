@@ -5,6 +5,7 @@ import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Toaster } from "@/components/ui/sonner";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { GoogleAdSense } from "@/components/analytics/GoogleAdSense";
 import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
 import { ReCaptcha } from "@/components/recaptcha/ReCaptcha";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
@@ -47,6 +48,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased min-h-screen`}
       >
         <GoogleAnalytics />
+        <GoogleAdSense />
         <MicrosoftClarity />
         <ReCaptcha />
         <Providers>

@@ -1,0 +1,395 @@
+{
+  "feature": "game_review_api",
+  "version": "1.0",
+  "description": "API specifications for the fast game review feature",
+
+  "base_path": "/api",
+
+  "endpoints": {
+    "enqueue_analysis": {
+      "method": "POST",
+      "path": "/game-review/queue",
+      "description": "Queue a game for analysis. Idempotent - re-queuing same game returns existing status.",
+      "authentication": "required (service_role or authenticated user)",
+      "authorization": "User must be participant of the game OR service role",
+      "rate_limit": {
+        "authenticated": "10 requests per minute per user",
+        "service": "100 requests per minute"
+      },
+      "request": {
+        "content_type": "application/json",
+        "body": {
+          "game_id": {
+            "type": "string",
+            "format": "uuid",
+            "required": true,
+            "description": "ID of the game to analyze"
+          },
+          "force": {
+            "type": "boolean",
+            "required": false,
+            "default": false,
+            "description": "Force re-analysis even if cached result exists (admin only)"
+          }
+        },
+        "example": {
+          "game_id": "123e4567-e89b-12d3-a456-426614174000"
+        }
+      },
+      "responses": {
+        "200": {
+          "description": "Analysis queued successfully or already exists",
+          "body": {
+            "success": true,
+            "status": "pending | processing | done",
+            "game_id": "string (uuid)",
+            "queued_at": "string (ISO 8601)",
+            "message": "string"
+          },
+          "examples": {
+            "new_queue": {
+              "success": true,
+              "status": "pending",
+              "game_id": "123e4567-e89b-12d3-a456-426614174000",
+              "queued_at": "2024-01-15T10:00:00Z",
+              "message": "Game queued for analysis"
+            },
+            "already_done": {
+              "success": true,
+              "status": "done",
+              "game_id": "123e4567-e89b-12d3-a456-426614174000",
+              "queued_at": "2024-01-15T09:00:00Z",
+              "message": "Analysis already completed"
+            }
+          }
+        },
+        "400": {
+          "description": "Invalid request",
+          "body": {
+            "success": false,
+            "error": "string",
+            "code": "INVALID_GAME_ID | GAME_NOT_FINISHED | INVALID_REQUEST"
+          }
+        },
+        "401": {
+          "description": "Unauthorized",
+          "body": {
+            "success": false,
+            "error": "Authentication required",
+            "code": "UNAUTHORIZED"
+          }
+        },
+        "403": {
+          "description": "Forbidden - user not participant",
+          "body": {
+            "success": false,
+            "error": "You don't have access to this game",
+            "code": "FORBIDDEN"
+          }
+        },
+        "404": {
+          "description": "Game not found",
+          "body": {
+            "success": false,
+            "error": "Game not found",
+            "code": "GAME_NOT_FOUND"
+          }
+        },
+        "429": {
+          "description": "Rate limit exceeded",
+          "body": {
+            "success": false,
+            "error": "Too many requests",
+            "code": "RATE_LIMIT_EXCEEDED",
+            "retry_after": 60
+          }
+        }
+      }
+    },
+
+    "get_review": {
+      "method": "GET",
+      "path": "/games/{gameId}/review",
+      "description": "Get the analysis results for a game",
+      "authentication": "optional (required for private games)",
+      "authorization": "Public finished games accessible to all; private games require participant",
+      "rate_limit": {
+        "authenticated": "60 requests per minute",
+        "anonymous": "20 requests per minute"
+      },
+      "path_parameters": {
+        "gameId": {
+          "type": "string",
+          "format": "uuid",
+          "required": true,
+          "description": "ID of the game"
+        }
+      },
+      "query_parameters": {
+        "include_moves": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include per-move analysis data"
+        }
+      },
+      "responses": {
+        "200_done": {
+          "description": "Analysis complete",
+          "body": {
+            "status": "done",
+            "game_id": "string (uuid)",
+            "analysis": {
+              "engine_name": "string",
+              "engine_version": "string",
+              "analysis_depth": "number",
+              "time_per_move_ms": "number",
+              "completed_at": "string (ISO 8601)",
+              "white": {
+                "accuracy": "number (0-100)",
+                "acpl": "number (average centipawn loss)",
+                "blunders": "number",
+                "mistakes": "number",
+                "inaccuracies": "number"
+              },
+              "black": {
+                "accuracy": "number (0-100)",
+                "acpl": "number",
+                "blunders": "number",
+                "mistakes": "number",
+                "inaccuracies": "number"
+              }
+            },
+            "moves": [
+              {
+                "ply": "number",
+                "played_move_uci": "string",
+                "played_move_san": "string",
+                "best_move_uci": "string",
+                "best_move_san": "string",
+                "eval_before": {
+                  "type": "cp | mate",
+                  "value": "number"
+                },
+                "eval_after": {
+                  "type": "cp | mate",
+                  "value": "number"
+                },
+                "eval_loss_cp": "number",
+                "classification": "best | good | inaccuracy | mistake | blunder",
+                "pv": ["string (UCI moves)"]
+              }
+            ]
+          },
+          "example": {
+            "status": "done",
+            "game_id": "123e4567-e89b-12d3-a456-426614174000",
+            "analysis": {
+              "engine_name": "stockfish",
+              "engine_version": "16.1",
+              "analysis_depth": 12,
+              "time_per_move_ms": 100,
+              "completed_at": "2024-01-15T10:05:00Z",
+              "white": {
+                "accuracy": 87.5,
+                "acpl": 32,
+                "blunders": 1,
+                "mistakes": 2,
+                "inaccuracies": 3
+              },
+              "black": {
+                "accuracy": 72.3,
+                "acpl": 58,
+                "blunders": 2,
+                "mistakes": 4,
+                "inaccuracies": 5
+              }
+            },
+            "moves": [
+              {
+                "ply": 1,
+                "played_move_uci": "e2e4",
+                "played_move_san": "e4",
+                "best_move_uci": "e2e4",
+                "best_move_san": "e4",
+                "eval_before": { "type": "cp", "value": 20 },
+                "eval_after": { "type": "cp", "value": 25 },
+                "eval_loss_cp": 0,
+                "classification": "best",
+                "pv": ["e2e4", "e7e5", "g1f3"]
+              }
+            ]
+          }
+        },
+        "200_processing": {
+          "description": "Analysis in progress",
+          "body": {
+            "status": "processing",
+            "game_id": "string (uuid)",
+            "started_at": "string (ISO 8601)",
+            "progress": {
+              "current_ply": "number",
+              "total_plies": "number",
+              "percentage": "number (0-100)"
+            }
+          }
+        },
+        "200_pending": {
+          "description": "Analysis queued but not started",
+          "body": {
+            "status": "pending",
+            "game_id": "string (uuid)",
+            "queued_at": "string (ISO 8601)",
+            "queue_position": "number (optional)"
+          }
+        },
+        "200_not_requested": {
+          "description": "No analysis has been requested for this game",
+          "body": {
+            "status": "not_requested",
+            "game_id": "string (uuid)",
+            "message": "Analysis has not been requested for this game"
+          }
+        },
+        "404": {
+          "description": "Game not found",
+          "body": {
+            "success": false,
+            "error": "Game not found",
+            "code": "GAME_NOT_FOUND"
+          }
+        },
+        "403": {
+          "description": "Access denied",
+          "body": {
+            "success": false,
+            "error": "You don't have access to this game",
+            "code": "FORBIDDEN"
+          }
+        }
+      }
+    },
+
+    "get_analysis_status": {
+      "method": "GET",
+      "path": "/game-review/status/{gameId}",
+      "description": "Get just the analysis status (lightweight endpoint for polling)",
+      "authentication": "optional",
+      "rate_limit": {
+        "all": "120 requests per minute"
+      },
+      "path_parameters": {
+        "gameId": {
+          "type": "string",
+          "format": "uuid",
+          "required": true
+        }
+      },
+      "responses": {
+        "200": {
+          "body": {
+            "game_id": "string (uuid)",
+            "status": "not_requested | pending | processing | done | failed",
+            "progress": {
+              "percentage": "number (0-100, only if processing)"
+            }
+          }
+        }
+      }
+    },
+
+    "batch_queue": {
+      "method": "POST",
+      "path": "/game-review/queue/batch",
+      "description": "Queue multiple games for analysis (admin/service only)",
+      "authentication": "required (service_role only)",
+      "rate_limit": {
+        "service": "10 requests per minute"
+      },
+      "request": {
+        "body": {
+          "game_ids": {
+            "type": "array",
+            "items": "string (uuid)",
+            "max_items": 50,
+            "required": true
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "body": {
+            "success": true,
+            "queued": "number",
+            "skipped": "number",
+            "results": [
+              {
+                "game_id": "string",
+                "status": "queued | skipped | error",
+                "reason": "string (optional)"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+
+  "webhooks": {
+    "analysis_complete": {
+      "description": "Webhook fired when analysis completes (for real-time updates)",
+      "event": "game_review.complete",
+      "payload": {
+        "event": "game_review.complete",
+        "game_id": "string (uuid)",
+        "status": "done | failed",
+        "timestamp": "string (ISO 8601)",
+        "summary": {
+          "white_accuracy": "number",
+          "black_accuracy": "number"
+        }
+      },
+      "delivery": "Supabase Realtime broadcast to game:{gameId} channel"
+    }
+  },
+
+  "error_codes": {
+    "INVALID_GAME_ID": "The provided game ID is not a valid UUID",
+    "GAME_NOT_FOUND": "No game exists with the provided ID",
+    "GAME_NOT_FINISHED": "Analysis can only be performed on finished games",
+    "UNAUTHORIZED": "Authentication is required for this endpoint",
+    "FORBIDDEN": "User does not have permission to access this resource",
+    "RATE_LIMIT_EXCEEDED": "Too many requests, please try again later",
+    "ANALYSIS_FAILED": "Analysis could not be completed due to an internal error",
+    "INVALID_REQUEST": "The request body is malformed or missing required fields"
+  },
+
+  "data_types": {
+    "EvaluationType": {
+      "type": "enum",
+      "values": ["cp", "mate"],
+      "description": "cp = centipawns, mate = mate in N moves"
+    },
+    "MoveClassification": {
+      "type": "enum",
+      "values": ["best", "good", "inaccuracy", "mistake", "blunder"],
+      "thresholds_cp": {
+        "best": "eval_loss <= 20",
+        "good": "eval_loss <= 50",
+        "inaccuracy": "eval_loss <= 150",
+        "mistake": "eval_loss <= 300",
+        "blunder": "eval_loss > 300"
+      }
+    },
+    "AnalysisStatus": {
+      "type": "enum",
+      "values": ["not_requested", "pending", "processing", "done", "failed"]
+    }
+  },
+
+  "implementation_notes": {
+    "idempotency": "POST /queue is idempotent - calling multiple times with same game_id is safe",
+    "caching": "GET /review responses should be cached (CDN or in-memory) since analysis is immutable once done",
+    "background_processing": "Analysis runs asynchronously via worker/queue system",
+    "realtime_updates": "Use Supabase Realtime to push status updates to clients waiting on analysis"
+  }
+}

@@ -52,6 +52,13 @@ export const ratingsApi = {
   getUser: (userId: string) => `${API_BASE}/ratings/${userId}`,
 } as const;
 
+// Game Review API
+export const gameReviewApi = {
+  queue: () => `${API_BASE}/game-review/queue`,
+  status: (gameId: string) => `${API_BASE}/game-review/status/${encodeURIComponent(gameId)}`,
+  getReview: (gameId: string) => `${API_BASE}/games/${encodeURIComponent(gameId)}/review`,
+} as const;
+
 // Learn API
 export const learnApi = {
   // Tracks
@@ -81,6 +88,7 @@ export const apiUrls = {
   invitations: invitationsApi,
   leaderboard: leaderboardApi,
   ratings: ratingsApi,
+  gameReview: gameReviewApi,
   learn: learnApi,
 } as const;
 

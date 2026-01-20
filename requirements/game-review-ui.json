@@ -1,0 +1,344 @@
+{
+  "feature": "game_review_ui",
+  "version": "1.0",
+  "description": "UI specifications for the fast game review feature",
+
+  "entry_points": {
+    "game_end_screen": {
+      "location": "Displayed after game finishes (checkmate, resign, timeout, draw)",
+      "component": "GameEndModal",
+      "trigger": "Automatic when game.status === 'finished'",
+      "elements": {
+        "review_button": {
+          "label": "Game Review",
+          "variant": "primary",
+          "icon": "BarChart3",
+          "visible_when": "game.status === 'finished'",
+          "disabled_when": "analysis.status === 'processing'",
+          "loading_state": {
+            "label": "Analyzing...",
+            "show_spinner": true
+          }
+        },
+        "accuracy_preview": {
+          "visible_when": "analysis.status === 'done'",
+          "display": {
+            "white_accuracy": "percentage with color indicator",
+            "black_accuracy": "percentage with color indicator"
+          }
+        }
+      }
+    },
+    "archive_page": {
+      "location": "/profile/[username]/games or /games/history",
+      "component": "GameHistoryRow",
+      "elements": {
+        "review_badge": {
+          "states": {
+            "ready": {
+              "icon": "CheckCircle",
+              "color": "green",
+              "tooltip": "Review available"
+            },
+            "processing": {
+              "icon": "Loader2",
+              "color": "yellow",
+              "tooltip": "Analysis in progress",
+              "animate": "spin"
+            },
+            "pending": {
+              "icon": "Clock",
+              "color": "gray",
+              "tooltip": "Queued for analysis"
+            }
+          }
+        },
+        "review_link": {
+          "label": "Review",
+          "href": "/games/{gameId}/review",
+          "visible_when": "analysis.status === 'done'"
+        }
+      }
+    },
+    "game_page": {
+      "location": "/games/{gameId}",
+      "component": "GamePage",
+      "elements": {
+        "review_tab": {
+          "label": "Review",
+          "icon": "BarChart3",
+          "visible_when": "game.status === 'finished'",
+          "badge": {
+            "show_when": "analysis.status === 'done'",
+            "content": "accuracy percentage"
+          }
+        }
+      }
+    }
+  },
+
+  "review_page": {
+    "route": "/games/{gameId}/review",
+    "layout": "two-column responsive",
+    "components": {
+      "header": {
+        "elements": [
+          "game_date",
+          "time_control_badge",
+          "game_mode_badge",
+          "result_display"
+        ]
+      },
+
+      "player_cards": {
+        "layout": "side-by-side",
+        "per_player": {
+          "avatar": "40x40px rounded",
+          "username": "link to profile",
+          "rating": "at time of game",
+          "rating_change": "+/- delta with color",
+          "accuracy": {
+            "display": "large percentage",
+            "color_scale": {
+              "excellent": { "min": 90, "color": "green-500" },
+              "good": { "min": 75, "color": "blue-500" },
+              "average": { "min": 60, "color": "yellow-500" },
+              "poor": { "min": 0, "color": "red-500" }
+            }
+          },
+          "stats_summary": {
+            "blunders": { "icon": "XCircle", "color": "red" },
+            "mistakes": { "icon": "AlertTriangle", "color": "orange" },
+            "inaccuracies": { "icon": "AlertCircle", "color": "yellow" }
+          }
+        }
+      },
+
+      "board_section": {
+        "component": "ReviewBoard",
+        "features": {
+          "board": {
+            "component": "Chessboard (same as game)",
+            "orientation": "auto based on viewer",
+            "interactive": false,
+            "show_coordinates": true
+          },
+          "move_annotations": {
+            "last_move_highlight": true,
+            "best_move_arrow": {
+              "color": "green",
+              "opacity": 0.8,
+              "toggle": true
+            },
+            "played_move_arrow": {
+              "color": "based on classification",
+              "opacity": 0.6
+            }
+          },
+          "evaluation_bar": {
+            "position": "left of board",
+            "height": "match board height",
+            "width": "24px",
+            "colors": {
+              "white_advantage": "white/light",
+              "black_advantage": "black/dark"
+            },
+            "scale": {
+              "type": "centipawn with mate display",
+              "range": [-1000, 1000],
+              "mate_display": "M{n}"
+            }
+          }
+        }
+      },
+
+      "move_timeline": {
+        "component": "MoveTimeline",
+        "layout": "scrollable list",
+        "features": {
+          "move_row": {
+            "elements": [
+              "move_number",
+              "white_move",
+              "black_move"
+            ],
+            "per_move": {
+              "san": "move notation",
+              "classification_icon": {
+                "best": { "icon": "Star", "color": "green" },
+                "good": { "icon": "ThumbsUp", "color": "blue" },
+                "inaccuracy": { "icon": "AlertCircle", "color": "yellow" },
+                "mistake": { "icon": "AlertTriangle", "color": "orange" },
+                "blunder": { "icon": "XCircle", "color": "red" }
+              },
+              "eval_change": "small text showing cp loss",
+              "clickable": true,
+              "hover_state": "highlight row"
+            }
+          },
+          "current_move_indicator": {
+            "style": "background highlight",
+            "auto_scroll": true
+          }
+        }
+      },
+
+      "move_detail_panel": {
+        "component": "MoveDetailPanel",
+        "visible_when": "move selected",
+        "elements": {
+          "move_info": {
+            "played_move": "SAN notation with piece icon",
+            "classification": "badge with label",
+            "eval_loss": "centipawn loss display"
+          },
+          "best_move": {
+            "label": "Best move",
+            "move": "SAN notation",
+            "eval": "evaluation after best move"
+          },
+          "position_eval": {
+            "before": "eval before move",
+            "after": "eval after move",
+            "change": "delta display"
+          },
+          "principal_variation": {
+            "label": "Engine line",
+            "moves": "first 5 moves of PV",
+            "collapsible": true
+          }
+        }
+      },
+
+      "navigation_controls": {
+        "component": "ReviewNavigation",
+        "elements": {
+          "buttons": [
+            { "action": "first", "icon": "ChevronsLeft", "shortcut": "Home" },
+            { "action": "previous", "icon": "ChevronLeft", "shortcut": "ArrowLeft" },
+            { "action": "next", "icon": "ChevronRight", "shortcut": "ArrowRight" },
+            { "action": "last", "icon": "ChevronsRight", "shortcut": "End" }
+          ],
+          "auto_play": {
+            "icon": "Play/Pause",
+            "speed_options": [0.5, 1, 2, 3],
+            "default_speed": 1
+          },
+          "flip_board": {
+            "icon": "FlipVertical",
+            "shortcut": "f"
+          }
+        }
+      },
+
+      "accuracy_chart": {
+        "component": "AccuracyChart",
+        "type": "line chart",
+        "features": {
+          "x_axis": "move number",
+          "y_axis": "evaluation (centipawns)",
+          "lines": {
+            "evaluation": {
+              "color": "gradient white to black based on advantage",
+              "interactive": true
+            }
+          },
+          "markers": {
+            "blunders": { "shape": "circle", "color": "red", "size": 8 },
+            "mistakes": { "shape": "circle", "color": "orange", "size": 6 },
+            "inaccuracies": { "shape": "circle", "color": "yellow", "size": 4 }
+          },
+          "tooltip": {
+            "show_on_hover": true,
+            "content": ["move_san", "classification", "eval"]
+          },
+          "click_to_navigate": true
+        }
+      }
+    },
+
+    "responsive_behavior": {
+      "desktop": {
+        "layout": "board left, timeline right, chart below",
+        "board_size": "min(60vh, 500px)"
+      },
+      "tablet": {
+        "layout": "board top, timeline below, chart hidden in tab",
+        "board_size": "min(50vh, 400px)"
+      },
+      "mobile": {
+        "layout": "stacked vertical",
+        "board_size": "100vw - padding",
+        "timeline": "horizontal scroll",
+        "chart": "separate tab"
+      }
+    }
+  },
+
+  "loading_states": {
+    "review_page_loading": {
+      "skeleton": {
+        "board": "square placeholder",
+        "player_cards": "two card placeholders",
+        "timeline": "list placeholder"
+      }
+    },
+    "analysis_processing": {
+      "display": {
+        "message": "Analyzing game...",
+        "progress": "indeterminate or percentage if available",
+        "estimated_time": "optional"
+      }
+    }
+  },
+
+  "error_states": {
+    "analysis_failed": {
+      "message": "Analysis could not be completed",
+      "action": {
+        "label": "Retry",
+        "handler": "re-queue analysis"
+      }
+    },
+    "game_not_found": {
+      "message": "Game not found",
+      "redirect": "/games"
+    },
+    "unauthorized": {
+      "message": "You don't have access to this game review",
+      "visible_when": "game is private and user is not participant"
+    }
+  },
+
+  "accessibility": {
+    "keyboard_navigation": {
+      "arrow_keys": "navigate moves",
+      "home_end": "first/last move",
+      "space": "toggle auto-play",
+      "f": "flip board",
+      "escape": "close detail panel"
+    },
+    "screen_reader": {
+      "move_announcements": "announce move, classification, and eval",
+      "chart_description": "describe evaluation trend"
+    },
+    "focus_management": {
+      "trap_focus_in_modal": true,
+      "restore_focus_on_close": true
+    }
+  },
+
+  "animations": {
+    "move_transition": {
+      "duration": "200ms",
+      "easing": "ease-out"
+    },
+    "eval_bar": {
+      "duration": "300ms",
+      "easing": "ease-in-out"
+    },
+    "chart_update": {
+      "duration": "150ms"
+    }
+  }
+}

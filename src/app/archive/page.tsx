@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { getSupabaseClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
 import { 
   Archive, 
@@ -41,28 +40,33 @@ export default function ArchivePage() {
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 });
 
   useEffect(() => {
-    const fetchGames = async () => {
-      // Wait for auth to initialize before making decisions
-      if (!isInitialized) {
-        return;
-      }
-
-      if (!isAuthenticated || !user) {
+    if (!user?.id) {
+      if (isInitialized) {
         setIsLoading(false);
-        return;
       }
+      return;
+    }
 
+    let cancelled = false;
+
+    const fetchGames = async () => {
       try {
-        const supabase = getSupabaseClient();
-        const { data, error } = await supabase
-          .from('games')
-          .select('*')
-          .or(`white_id.eq.${user.id},black_id.eq.${user.id}`)
-          .eq('status', 'finished')
-          .order('created_at', { ascending: false })
-          .limit(50);
+        const gamesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/games?select=*&or=(white_id.eq.${user.id},black_id.eq.${user.id})&status=eq.finished&order=created_at.desc&limit=50`;
 
-        if (error) throw error;
+        const response = await fetch(gamesUrl, {
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch games');
+        }
+
+        const data = await response.json();
+
+        if (cancelled) return;
 
         setGames(data || []);
 
@@ -82,12 +86,18 @@ export default function ArchivePage() {
       } catch (error) {
         console.error('Error fetching games:', error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchGames();
-  }, [isInitialized, isAuthenticated, user]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, isInitialized]);
 
   const formatTimeControl = (tc: { baseMs: number; incrementMs: number }) => {
     const minutes = tc.baseMs / 60000;
@@ -115,6 +125,19 @@ export default function ArchivePage() {
     if (isDraw) return { text: 'Draw', color: 'text-yellow-500' };
     return { text: 'Lost', color: 'text-red-500' };
   };
+
+  // Show loading only if not initialized AND not already authenticated
+  // (isAuthenticated being true implies initialization completed)
+  if (!isInitialized && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
