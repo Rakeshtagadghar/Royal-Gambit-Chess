@@ -469,9 +469,9 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // @ts-ignore - EdgeRuntime available in Supabase
+    // @ts-expect-error - EdgeRuntime available in Supabase
     if (typeof EdgeRuntime !== "undefined" && EdgeRuntime.waitUntil) {
-      // @ts-ignore
+      // @ts-expect-error - EdgeRuntime available in Supabase
       EdgeRuntime.waitUntil(analyzeGame(supabase, gameId));
       return new Response(
         JSON.stringify({ message: "Analysis started", game_id: gameId }),
