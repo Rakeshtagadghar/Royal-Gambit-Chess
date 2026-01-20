@@ -5,10 +5,11 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Cookie, X } from "lucide-react";
+import { updateGoogleConsent } from "@/components/analytics/GoogleConsentMode";
 
 const COOKIE_CONSENT_KEY = "royalgambit_cookie_consent";
 
-type ConsentType = "all" | "essential" | null;
+type ConsentType = "all" | "essential" | "rejected" | null;
 
 export function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false);
@@ -29,12 +30,24 @@ export function CookieConsent() {
     localStorage.setItem(COOKIE_CONSENT_KEY, "all");
     setConsent("all");
     setShowBanner(false);
+    // Update Google Consent Mode
+    updateGoogleConsent("all");
   };
 
   const acceptEssential = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "essential");
     setConsent("essential");
     setShowBanner(false);
+    // Update Google Consent Mode - allows analytics, denies ads/personalization
+    updateGoogleConsent("essential");
+  };
+
+  const rejectAll = () => {
+    localStorage.setItem(COOKIE_CONSENT_KEY, "rejected");
+    setConsent("rejected");
+    setShowBanner(false);
+    // Update Google Consent Mode - denies all non-essential cookies
+    updateGoogleConsent("rejected");
   };
 
   return (
@@ -61,15 +74,14 @@ export function CookieConsent() {
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 shrink-0 sm:hidden"
-                      onClick={acceptEssential}
+                      onClick={rejectAll}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
 
                   <p className="text-sm text-muted-foreground">
-                    We use cookies to enhance your browsing experience, analyze site traffic,
-                    and improve our services. By clicking &quot;Accept All&quot;, you consent to our use of cookies.
+                    We use cookies for analytics, advertising, and to improve our services.
                     Read our{" "}
                     <Link href="/cookie-policy" className="text-primary hover:underline">
                       Cookie Policy
@@ -86,11 +98,18 @@ export function CookieConsent() {
                       Accept All
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       onClick={acceptEssential}
                       className="flex-1 sm:flex-none"
                     >
-                      Essential Only
+                      Accept Essential
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={rejectAll}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Reject All
                     </Button>
                   </div>
                 </div>
@@ -126,6 +145,7 @@ export function useCookieConsent() {
   return {
     consent,
     isLoaded,
+    hasFullConsent: consent === "all",
     hasAnalyticsConsent: consent === "all" || consent === "essential",
     hasEssentialConsent: consent !== null,
   };

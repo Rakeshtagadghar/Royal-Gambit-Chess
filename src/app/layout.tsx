@@ -10,6 +10,7 @@ import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
 import { ReCaptcha } from "@/components/recaptcha/ReCaptcha";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
 import { DevIndicator } from "@/components/DevIndicator";
+import { CONSENT_MODE_SCRIPT } from "@/components/analytics/GoogleConsentMode";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: CONSENT_MODE_SCRIPT }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased min-h-screen`}
       >

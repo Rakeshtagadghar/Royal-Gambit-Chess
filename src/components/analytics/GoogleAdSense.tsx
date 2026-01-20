@@ -5,10 +5,19 @@ import { useCookieConsent } from "@/components/cookies/CookieConsent";
 
 export const ADSENSE_CLIENT_ID = process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID;
 
+/**
+ * Google AdSense component - only loads after user gives full consent
+ *
+ * For strict GDPR compliance, we do NOT load AdSense scripts until
+ * the user has explicitly accepted all cookies (including ads).
+ *
+ * See: https://support.google.com/adsense/answer/13554116
+ */
 export function GoogleAdSense() {
-  const { hasAnalyticsConsent, isLoaded } = useCookieConsent();
+  const { hasFullConsent, isLoaded } = useCookieConsent();
 
-  if (!ADSENSE_CLIENT_ID || !isLoaded || !hasAnalyticsConsent) {
+  // Only load AdSense when user has given full consent (including ads)
+  if (!ADSENSE_CLIENT_ID || !isLoaded || !hasFullConsent) {
     return null;
   }
 
