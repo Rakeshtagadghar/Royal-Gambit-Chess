@@ -5,7 +5,8 @@
       "Bash(grep:*)",
       "Bash(npm install:*)",
       "Bash(npx vitest:*)",
-      "Bash(npx playwright test:*)"
+      "Bash(npx playwright test:*)",
+      "Bash(npx supabase status)"
     ]
   }
 }

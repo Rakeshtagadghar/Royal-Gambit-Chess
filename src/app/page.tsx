@@ -17,6 +17,7 @@ import {
   Award,
   Puzzle
 } from 'lucide-react';
+import { Footer } from '@/components/layout/Footer';
 
 const playFeatures = [
   {
@@ -398,24 +399,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">♟</span>
-              <span className="font-semibold">RoyalGambit</span>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <Link href="/learn" className="hover:text-foreground transition-colors">Learn</Link>
-              <Link href="/play" className="hover:text-foreground transition-colors">Play</Link>
-              <Link href="/leaderboard" className="hover:text-foreground transition-colors">Leaderboard</Link>
-              <span className="text-muted-foreground/50">|</span>
-              <Link href="/privacy-policy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
-              <Link href="/cookie-policy" className="hover:text-foreground transition-colors">Cookie Policy</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

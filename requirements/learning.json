@@ -1,0 +1,467 @@
+{
+  "spec_version": "1.0",
+  "feature": "learn_chess_basics_piece_by_piece_expansion",
+  "goal": "Expand the existing 'Chess Basics' beginner track by adding one lesson per chess piece so users can learn all piece movements in one structured flow. Reuse existing Learn APIs/components; only seed new lesson/step content and add to the existing track ordering.",
+  "assumptions": {
+    "existing_track_slug": "beginner-basics",
+    "existing_lessons_present": [
+      "how-pawn-moves",
+      "the-knight",
+      "back-rank-mate",
+      "board-coordinates"
+    ],
+    "existing_step_types_supported": ["explain", "move_task", "quiz"],
+    "move_validation": "Server/client validates required_move_uci against initial_fen; success shows explain_correct_md; failure shows explain_wrong_md and hints.",
+    "fen_engine": "Use existing chess rules engine already used for learn move tasks (same as current Pawn/Knight lessons)."
+  },
+  "scope": {
+    "in_scope": [
+      "Add new lessons (rook, bishop, queen, king, castling) under existing 'Chess Basics' track",
+      "Add learn_lesson_steps for each lesson with explain + move_task + quiz",
+      "Ensure ordering integrates cleanly with existing four lessons",
+      "Publish lessons (is_published=true) and keep consistent metadata style"
+    ],
+    "out_of_scope": [
+      "New backend APIs",
+      "New DB tables",
+      "New UI components (reuse existing Learn UI)",
+      "AI review/explanations",
+      "Localization/multi-language"
+    ]
+  },
+  "data_model_mapping": {
+    "tables_used": {
+      "learn_tracks": "Existing track row identified by slug=beginner-basics",
+      "learn_lessons": "Insert new rows tied to track_id",
+      "learn_lesson_steps": "Insert steps per lesson"
+    },
+    "lesson_fields": [
+      "track_id",
+      "slug",
+      "title",
+      "topic",
+      "level",
+      "description",
+      "estimated_minutes",
+      "order_index",
+      "is_published",
+      "prerequisite_lesson_ids (optional)"
+    ],
+    "step_fields": [
+      "lesson_id",
+      "step_index",
+      "type",
+      "title",
+      "body_md",
+      "initial_fen",
+      "meta",
+      "required_move_uci (for move_task via update)",
+      "explain_correct_md (for move_task via update)",
+      "explain_wrong_md (for move_task via update)",
+      "hints (for move_task via update)"
+    ]
+  },
+  "ordering_plan": {
+    "track_slug": "beginner-basics",
+    "final_order": [
+      { "slug": "how-pawn-moves", "order_index": 0, "note": "Existing" },
+      { "slug": "the-knight", "order_index": 1, "note": "Existing" },
+      { "slug": "the-rook", "order_index": 2, "note": "New" },
+      { "slug": "the-bishop", "order_index": 3, "note": "New" },
+      { "slug": "the-queen", "order_index": 4, "note": "New" },
+      { "slug": "the-king", "order_index": 5, "note": "New" },
+      { "slug": "castling", "order_index": 6, "note": "New" },
+      { "slug": "back-rank-mate", "order_index": 7, "note": "Existing" },
+      { "slug": "board-coordinates", "order_index": 8, "note": "Existing" }
+    ],
+    "compatibility_rule": "If the existing order_indexes differ in DB, update only the new lessons to fit after Knight; do not renumber existing lessons unless required by the product."
+  },
+  "lessons_to_add": [
+    {
+      "slug": "the-rook",
+      "title": "The Rook",
+      "topic": "rules",
+      "level": "beginner",
+      "description": "Learn how rooks move in straight lines, how they capture, and why open files matter.",
+      "estimated_minutes": 5,
+      "order_index": 2,
+      "is_published": true,
+      "steps": [
+        {
+          "step_index": 0,
+          "type": "explain",
+          "title": "How the Rook Moves",
+          "body_md": "Rooks move any number of squares **horizontally** or **vertically**.\n\n**Key rules:**\n- Rooks move in straight lines (files and ranks)\n- They **cannot jump** over pieces\n- Capturing works by landing on an enemy piece square",
+          "initial_fen": "4k3/8/8/8/8/8/8/4R1K1 w - - 0 1",
+          "meta": {
+            "highlights": ["e1"],
+            "arrows": [
+              { "from": "e1", "to": "e8", "color": "green" },
+              { "from": "e1", "to": "a1", "color": "green" },
+              { "from": "e1", "to": "h1", "color": "green" }
+            ]
+          }
+        },
+        {
+          "step_index": 1,
+          "type": "explain",
+          "title": "Blocking",
+          "body_md": "Sliding pieces (rook/bishop/queen) cannot move through other pieces.\n\nIf something is in the way, the rook must stop before it.",
+          "initial_fen": "4k3/8/8/8/8/8/4P3/4R1K1 w - - 0 1",
+          "meta": {
+            "highlights": ["e2"],
+            "arrows": [{ "from": "e1", "to": "e2", "color": "red" }]
+          }
+        },
+        {
+          "step_index": 2,
+          "type": "move_task",
+          "title": "Capture with the Rook",
+          "body_md": "Capture the black pawn on e7 with your rook.",
+          "initial_fen": "4k3/4p3/8/8/8/8/8/4R1K1 w - - 0 1",
+          "meta": { "pieceToMove": "e1" },
+          "required_move_uci": "e1e7",
+          "explain_correct_md": "Nice! The rook captured by moving straight up the file.",
+          "explain_wrong_md": "Move the rook from e1 to e7 in a straight line to capture the pawn.",
+          "hints": [
+            "Rooks move in straight lines",
+            "Capture by landing on the pawn's square",
+            "Try moving up the e-file"
+          ]
+        },
+        {
+          "step_index": 3,
+          "type": "quiz",
+          "title": "Rook Quiz",
+          "body_md": "Quick check!",
+          "initial_fen": null,
+          "meta": {
+            "quiz": {
+              "question": "Which directions can a rook move?",
+              "options": [
+                { "id": "a", "text": "Diagonally" },
+                { "id": "b", "text": "Horizontally and vertically" },
+                { "id": "c", "text": "In an L-shape" },
+                { "id": "d", "text": "One square only" }
+              ],
+              "correctOptionId": "b",
+              "explainMd": "Rooks move any number of squares horizontally or vertically, but never diagonally."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "the-bishop",
+      "title": "The Bishop",
+      "topic": "rules",
+      "level": "beginner",
+      "description": "Learn diagonal movement and why bishops stay on the same colour squares forever.",
+      "estimated_minutes": 5,
+      "order_index": 3,
+      "is_published": true,
+      "steps": [
+        {
+          "step_index": 0,
+          "type": "explain",
+          "title": "How the Bishop Moves",
+          "body_md": "Bishops move any number of squares **diagonally**.\n\n**Key rules:**\n- Bishops move diagonally only\n- They **cannot jump** over pieces\n- A bishop always stays on the same colour square (light or dark)",
+          "initial_fen": "4k3/8/8/8/3B4/8/8/4K3 w - - 0 1",
+          "meta": {
+            "highlights": ["d4"],
+            "arrows": [
+              { "from": "d4", "to": "a7", "color": "green" },
+              { "from": "d4", "to": "g7", "color": "green" },
+              { "from": "d4", "to": "a1", "color": "green" },
+              { "from": "d4", "to": "h8", "color": "green" }
+            ]
+          }
+        },
+        {
+          "step_index": 1,
+          "type": "explain",
+          "title": "Same Colour Forever",
+          "body_md": "This bishop is on a dark square, so it can only ever land on dark squares.\n\nThat’s why each side starts with **one light-square bishop** and **one dark-square bishop**.",
+          "initial_fen": "4k3/8/8/8/3B4/8/8/4K3 w - - 0 1",
+          "meta": { "highlights": ["d4"] }
+        },
+        {
+          "step_index": 2,
+          "type": "move_task",
+          "title": "Capture Diagonally",
+          "body_md": "Capture the black pawn on g7 with your bishop.",
+          "initial_fen": "4k3/6p1/8/8/3B4/8/8/4K3 w - - 0 1",
+          "meta": { "pieceToMove": "d4" },
+          "required_move_uci": "d4g7",
+          "explain_correct_md": "Perfect! Bishops capture diagonally by landing on the target square.",
+          "explain_wrong_md": "Move the bishop along the diagonal from d4 to g7.",
+          "hints": [
+            "Bishops move diagonally",
+            "Follow the diagonal line to g7",
+            "Capture by landing on g7"
+          ]
+        },
+        {
+          "step_index": 3,
+          "type": "quiz",
+          "title": "Bishop Quiz",
+          "body_md": "Quick check!",
+          "initial_fen": null,
+          "meta": {
+            "quiz": {
+              "question": "Can a bishop ever change the colour of square it sits on?",
+              "options": [
+                { "id": "a", "text": "Yes, if it captures" },
+                { "id": "b", "text": "Yes, if it moves far enough" },
+                { "id": "c", "text": "No, never" },
+                { "id": "d", "text": "Only in endgames" }
+              ],
+              "correctOptionId": "c",
+              "explainMd": "A bishop always stays on the same colour because diagonal moves preserve square colour."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "the-queen",
+      "title": "The Queen",
+      "topic": "rules",
+      "level": "beginner",
+      "description": "Learn the queen’s movement: like a rook and bishop combined.",
+      "estimated_minutes": 6,
+      "order_index": 4,
+      "is_published": true,
+      "steps": [
+        {
+          "step_index": 0,
+          "type": "explain",
+          "title": "Queen = Rook + Bishop",
+          "body_md": "The queen is the most powerful piece.\n\nShe moves like a **rook** and a **bishop** combined:\n- Any number of squares horizontally/vertically\n- Any number of squares diagonally\n\nLike other sliding pieces, she **cannot jump** over pieces.",
+          "initial_fen": "4k3/8/8/8/3Q4/8/8/4K3 w - - 0 1",
+          "meta": {
+            "highlights": ["d4"],
+            "arrows": [
+              { "from": "d4", "to": "d8", "color": "green" },
+              { "from": "d4", "to": "a4", "color": "green" },
+              { "from": "d4", "to": "h4", "color": "green" },
+              { "from": "d4", "to": "h8", "color": "green" }
+            ]
+          }
+        },
+        {
+          "step_index": 1,
+          "type": "move_task",
+          "title": "Queen Capture",
+          "body_md": "Capture the black pawn on d7 with your queen.",
+          "initial_fen": "4k3/3p4/8/8/3Q4/8/8/4K3 w - - 0 1",
+          "meta": { "pieceToMove": "d4" },
+          "required_move_uci": "d4d7",
+          "explain_correct_md": "Great! The queen captured by moving straight up (like a rook).",
+          "explain_wrong_md": "Move the queen from d4 to d7 (same file) to capture the pawn.",
+          "hints": [
+            "Queen moves like a rook or bishop",
+            "d4 to d7 is a straight vertical line",
+            "Capture by landing on d7"
+          ]
+        },
+        {
+          "step_index": 2,
+          "type": "quiz",
+          "title": "Queen Quiz",
+          "body_md": "Quick check!",
+          "initial_fen": null,
+          "meta": {
+            "quiz": {
+              "question": "The queen moves like which pieces combined?",
+              "options": [
+                { "id": "a", "text": "Knight + Bishop" },
+                { "id": "b", "text": "Rook + Bishop" },
+                { "id": "c", "text": "King + Rook" },
+                { "id": "d", "text": "Pawn + Knight" }
+              ],
+              "correctOptionId": "b",
+              "explainMd": "The queen combines rook movement (straight lines) and bishop movement (diagonals)."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "the-king",
+      "title": "The King",
+      "topic": "rules",
+      "level": "beginner",
+      "description": "Learn how the king moves, what check means, and what moves are illegal.",
+      "estimated_minutes": 6,
+      "order_index": 5,
+      "is_published": true,
+      "steps": [
+        {
+          "step_index": 0,
+          "type": "explain",
+          "title": "How the King Moves",
+          "body_md": "The king moves **one square** in any direction.\n\n**Key rule:** The king is not allowed to move into **check** (a square attacked by an enemy piece).",
+          "initial_fen": "4k3/8/8/8/8/8/4K3/8 w - - 0 1",
+          "meta": {
+            "highlights": ["e2"],
+            "arrows": [
+              { "from": "e2", "to": "d3", "color": "green" },
+              { "from": "e2", "to": "e3", "color": "green" },
+              { "from": "e2", "to": "f3", "color": "green" },
+              { "from": "e2", "to": "d2", "color": "green" },
+              { "from": "e2", "to": "f2", "color": "green" },
+              { "from": "e2", "to": "d1", "color": "green" },
+              { "from": "e2", "to": "e1", "color": "green" },
+              { "from": "e2", "to": "f1", "color": "green" }
+            ]
+          }
+        },
+        {
+          "step_index": 1,
+          "type": "explain",
+          "title": "What is Check?",
+          "body_md": "Your king is in **check** if an enemy piece attacks the king’s square.\n\nWhen in check, you must respond immediately by:\n- Moving the king\n- Capturing the attacking piece\n- Blocking the attack (if possible)",
+          "initial_fen": "4k3/8/8/8/8/8/4K3/4r3 w - - 0 1",
+          "meta": { "highlights": ["e2", "e1"] }
+        },
+        {
+          "step_index": 2,
+          "type": "move_task",
+          "title": "Escape Check",
+          "body_md": "Your king is in check from the rook. Move the king to a safe square.",
+          "initial_fen": "4k3/8/8/8/8/8/4K3/4r3 w - - 0 1",
+          "meta": { "pieceToMove": "e2" },
+          "required_move_uci": "e2f3",
+          "explain_correct_md": "Well done! The king moved to a square not attacked by the rook.",
+          "explain_wrong_md": "Move the king to a square that is not attacked by the rook on e1 (try f3).",
+          "hints": [
+            "You must respond to check",
+            "Avoid squares attacked by the rook",
+            "Try moving diagonally away to f3"
+          ]
+        },
+        {
+          "step_index": 3,
+          "type": "quiz",
+          "title": "King Quiz",
+          "body_md": "Quick check!",
+          "initial_fen": null,
+          "meta": {
+            "quiz": {
+              "question": "Is the king allowed to move into a square attacked by an enemy piece?",
+              "options": [
+                { "id": "a", "text": "Yes, if it captures" },
+                { "id": "b", "text": "Yes, if it is a good move" },
+                { "id": "c", "text": "No, never" },
+                { "id": "d", "text": "Only in the opening" }
+              ],
+              "correctOptionId": "c",
+              "explainMd": "The king cannot move into check. Any move that places the king on an attacked square is illegal."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "slug": "castling",
+      "title": "Castling",
+      "topic": "rules",
+      "level": "beginner",
+      "description": "Learn the special king-and-rook move that improves king safety and activates a rook.",
+      "estimated_minutes": 5,
+      "order_index": 6,
+      "is_published": true,
+      "steps": [
+        {
+          "step_index": 0,
+          "type": "explain",
+          "title": "What is Castling?",
+          "body_md": "Castling is a special move that moves the **king** and **rook** at the same time.\n\n**Why castle?**\n- Makes your king safer\n- Activates your rook toward the center\n\nKingside castling (O-O): King moves **two squares** toward the rook, rook jumps over to the other side.",
+          "initial_fen": "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+          "meta": {
+            "highlights": ["e1", "h1"],
+            "arrows": [
+              { "from": "e1", "to": "g1", "color": "green" },
+              { "from": "h1", "to": "f1", "color": "green" }
+            ]
+          }
+        },
+        {
+          "step_index": 1,
+          "type": "explain",
+          "title": "When Castling is Legal",
+          "body_md": "You can castle only if:\n- The king and rook have **not moved**\n- Squares between them are **empty**\n- The king is **not in check**\n- The king does **not pass through** check\n- The king does **not land in** check",
+          "initial_fen": "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+          "meta": {}
+        },
+        {
+          "step_index": 2,
+          "type": "move_task",
+          "title": "Castle Kingside",
+          "body_md": "Castle kingside (O-O).",
+          "initial_fen": "4k3/8/8/8/8/8/8/R3K2R w KQ - 0 1",
+          "meta": { "pieceToMove": "e1" },
+          "required_move_uci": "e1g1",
+          "explain_correct_md": "Nice! You castled kingside: king to g1 and rook to f1.",
+          "explain_wrong_md": "Castle kingside by moving your king from e1 to g1 (two squares).",
+          "hints": [
+            "Castling is a king move",
+            "Move king two squares toward the rook",
+            "From e1 to g1 is kingside castling"
+          ]
+        },
+        {
+          "step_index": 3,
+          "type": "quiz",
+          "title": "Castling Quiz",
+          "body_md": "Quick check!",
+          "initial_fen": null,
+          "meta": {
+            "quiz": {
+              "question": "Can you castle while your king is in check?",
+              "options": [
+                { "id": "a", "text": "Yes" },
+                { "id": "b", "text": "No" }
+              ],
+              "correctOptionId": "b",
+              "explainMd": "You cannot castle out of check. The king must not be in check before castling."
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "implementation_notes": {
+    "seed_strategy": [
+      "Resolve track_id via learn_tracks.slug = beginner-basics",
+      "Insert each learn_lessons row with ON CONFLICT (slug) DO NOTHING",
+      "For each inserted lesson, insert learn_lesson_steps rows",
+      "For move_task steps, set required_move_uci/explain/hints either during insert (if your schema supports it) or via UPDATE like your current seed script"
+    ],
+    "idempotency": {
+      "lessons": "Use ON CONFLICT (slug) DO NOTHING for learn_lessons",
+      "steps": "Use a unique constraint (lesson_id, step_index) if present; otherwise delete+reinsert per lesson when reseeding (recommended)."
+    },
+    "content_style": [
+      "Keep body_md short and beginner-friendly",
+      "Use 1-2 tasks per lesson max",
+      "Quizzes reinforce one key rule only"
+    ]
+  },
+  "acceptance_criteria": [
+    "Chess Basics track shows the new lessons in the specified order (between Knight and Back Rank Mate)",
+    "Each new lesson loads successfully in the Learn UI and renders explain/move_task/quiz",
+    "Each move_task validates correctly against required_move_uci",
+    "No new APIs or DB schema changes are required",
+    "Seeding is idempotent (re-running does not fail or duplicate lessons)"
+  ],
+  "testing_notes": {
+    "smoke_tests": [
+      "Open Learn → Chess Basics → each lesson renders steps 0..n",
+      "Complete each move_task successfully and verify success copy displays",
+      "Fail each move_task intentionally and verify wrong/hints display",
+      "Verify lesson list ordering and published visibility"
+    ]
+  }
+}

@@ -131,8 +131,8 @@ export default function CookiePolicyPage() {
               <h2 className="text-xl font-semibold mb-4">Contact Us</h2>
               <p className="text-muted-foreground">
                 If you have questions about our use of cookies, please contact us at{" "}
-                <a href="mailto:privacy@royalgambit.com" className="text-primary hover:underline">
-                  privacy@royalgambit.com
+                <a href="mailto:rakeshtagadghar@gmail.com" className="text-primary hover:underline">
+                  rakeshtagadghar@gmail.com
                 </a>
               </p>
             </section>

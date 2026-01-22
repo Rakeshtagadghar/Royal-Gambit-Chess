@@ -178,7 +178,37 @@ export default function PrivacyPolicyPage() {
                 <li>
                   <strong>Google OAuth:</strong> Optional sign-in method
                 </li>
+                <li>
+                  <strong>Google AdSense:</strong> Advertising services
+                </li>
               </ul>
+            </section>
+
+            <section className="mb-8">
+              <h2 className="text-xl font-semibold mb-4">Microsoft Clarity</h2>
+              <p className="text-muted-foreground mb-4">
+                We partner with Microsoft Clarity and Microsoft Advertising to capture how you
+                use and interact with our website through behavioral metrics, heatmaps, and
+                session replay to improve and market our products/services.
+              </p>
+              <p className="text-muted-foreground mb-4">
+                Website usage data is captured using first and third-party cookies and other
+                tracking technologies to determine the popularity of products/services and
+                online activity. Additionally, we use this information for site optimization,
+                fraud/security purposes, and advertising.
+              </p>
+              <p className="text-muted-foreground">
+                For more information about how Microsoft collects and uses your data, visit the{" "}
+                <a
+                  href="https://privacy.microsoft.com/privacystatement"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Microsoft Privacy Statement
+                </a>
+                .
+              </p>
             </section>
 
             <section className="mb-8">
@@ -195,8 +225,8 @@ export default function PrivacyPolicyPage() {
               <p className="text-muted-foreground">
                 If you have questions or concerns about this privacy policy or our data practices,
                 please contact us at{" "}
-                <a href="mailto:privacy@royalgambit.com" className="text-primary hover:underline">
-                  privacy@royalgambit.com
+                <a href="mailto:rakeshtagadghar@gmail.com" className="text-primary hover:underline">
+                  rakeshtagadghar@gmail.com
                 </a>
               </p>
             </section>
