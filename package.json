@@ -28,7 +28,14 @@
     "supabase:reset": "supabase db reset",
     "supabase:status": "supabase status",
     "supabase:verify": "bash scripts/verify-db-setup.sh",
-    "dev:test": "dotenv -e .env.test.local -- next dev"
+    "dev:test": "dotenv -e .env.test.local -- next dev",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "tauri:build:windows": "tauri build --target x86_64-pc-windows-msvc",
+    "tauri:build:macos-arm": "tauri build --target aarch64-apple-darwin",
+    "tauri:build:macos-x64": "tauri build --target x86_64-apple-darwin",
+    "tauri:build:linux": "tauri build --target x86_64-unknown-linux-gnu"
   },
   "dependencies": {
     "@microsoft/clarity": "^1.0.2",
@@ -43,6 +50,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@tanstack/react-query": "^5.90.12",
+    "@tauri-apps/api": "^2.9.1",
     "chess.js": "^1.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -63,6 +71,7 @@
     "@axe-core/playwright": "^4.10.0",
     "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4",
+    "@tauri-apps/cli": "^2.9.6",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@testing-library/user-event": "^14.5.2",

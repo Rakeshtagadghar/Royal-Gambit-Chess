@@ -1,0 +1,178 @@
+{
+  "project": {
+    "name": "RoyalGambit Desktop",
+    "goal": "Ship the existing Next.js chess app as installable desktop apps for Windows/macOS/Linux with minimal code duplication and shared backend (Supabase).",
+    "non_goals": [
+      "Rewriting UI in native frameworks",
+      "Embedding Supabase service role keys in client"
+    ]
+  },
+  "target_platforms": {
+    "windows": ["x64"],
+    "macos": ["arm64", "x64"],
+    "linux": ["x64"]
+  },
+  "approach_options": {
+    "preferred": {
+      "framework": "Tauri",
+      "reason": [
+        "Smaller binaries than Electron",
+        "Lower RAM usage",
+        "Good security defaults",
+        "Great fit for a chess app"
+      ]
+    },
+    "alternative": {
+      "framework": "Electron",
+      "when_to_choose": [
+        "Need heavy Node runtime APIs or Node-only libraries in the desktop process",
+        "Want quickest path with most community templates"
+      ]
+    }
+  },
+  "app_packaging_strategy": {
+    "single_codebase": true,
+    "ui_source": {
+      "type": "local-bundled-ui",
+      "details": [
+        "Build Next.js to static assets when possible (export) OR serve a local Next.js server inside desktop (more complex).",
+        "Prefer static build for desktop for speed and simplicity."
+      ]
+    },
+    "env_management": {
+      "environments": ["development", "staging", "production"],
+      "rules": [
+        "Desktop dev must never point to production DB if destructive endpoints exist",
+        "Use separate Supabase project for staging OR local Supabase for CI/dev"
+      ]
+    }
+  },
+  "security_requirements": {
+    "no_secrets_in_client": [
+      "No Supabase SERVICE_ROLE key inside desktop or web client",
+      "Only anon/public keys allowed in client"
+    ],
+    "privileged_ops": {
+      "handled_by": "Next.js API routes or server-only functions",
+      "examples": [
+        "DB reset / seed functions",
+        "Admin moderation actions",
+        "Rating processing if it requires privileged access"
+      ]
+    },
+    "desktop_hardening": [
+      "Disable arbitrary navigation to untrusted origins",
+      "Allowlist domains (production app domain + local dev domain)",
+      "CSP for desktop webview content",
+      "Disable/limit file system access unless required"
+    ]
+  },
+  "desktop_features_mvp": {
+    "core": [
+      "Launch app to Home/Lobby",
+      "Login/signup via Supabase auth",
+      "Play bot + PvP modes (existing features)",
+      "Game archive + game detail screens",
+      "Realtime updates (moves/invitations/ratings) work as on web",
+      "Settings: theme, sound, board preferences"
+    ],
+    "desktop_specific": [
+      "Window controls: minimize/maximize/close",
+      "Single-instance lock (optional)",
+      "Deep link handling for invitations (optional MVP)"
+    ]
+  },
+  "desktop_features_phase_2": {
+    "native_integrations": [
+      "System notifications (match invite, game start, game end)",
+      "Auto-launch on startup (optional)",
+      "Tray menu (optional)",
+      "Offline-friendly cache for last N games (optional)"
+    ],
+    "distribution": [
+      "Auto-updates",
+      "Code signing (macOS notarization, Windows signing)",
+      "Release channels: beta/stable"
+    ]
+  },
+  "build_and_release": {
+    "ci_cd": {
+      "provider": "GitHub Actions",
+      "pipelines": [
+        "build_web",
+        "build_desktop_windows",
+        "build_desktop_macos",
+        "build_desktop_linux"
+      ],
+      "artifacts": [
+        "installers (msi/exe/dmg/pkg/AppImage/deb/rpm as applicable)",
+        "checksums",
+        "release notes"
+      ]
+    },
+    "versioning": {
+      "scheme": "semver",
+      "source_of_truth": "repo version",
+      "desktop_and_web_sync": true
+    }
+  },
+  "testing_requirements": {
+    "desktop_smoke_tests": [
+      "App launches",
+      "Auth flow works",
+      "Can create/join a game",
+      "Moves update in realtime",
+      "Archive loads"
+    ],
+    "security_tests": [
+      "Navigation blocked to non-allowlisted domains",
+      "No service role key present in bundle",
+      "Destructive endpoints disabled in production builds"
+    ]
+  },
+  "observability": {
+    "crash_reporting": [
+      "Capture desktop crashes and JS errors",
+      "Upload logs with user opt-in"
+    ],
+    "logging": [
+      "Structured logs with redaction",
+      "Debug logs enabled only in dev/beta"
+    ]
+  },
+  "data_and_backend": {
+    "supabase": {
+      "projects": ["staging", "production"],
+      "rules": [
+        "Desktop uses staging by default in dev builds",
+        "Production desktop build points to production Supabase URL only"
+      ]
+    },
+    "api_routes": {
+      "environment_gating": [
+        "Disable db reset/seed routes in production",
+        "Require server-side auth/role checks"
+      ]
+    }
+  },
+  "deliverables": {
+    "repo_changes": [
+      "Add /apps/desktop shell (Tauri or Electron)",
+      "Build scripts for desktop targets",
+      "Environment config + domain allowlist",
+      "Release workflows"
+    ],
+    "documentation": [
+      "How to run desktop dev locally",
+      "How to create staging vs production builds",
+      "How to publish releases"
+    ]
+  },
+  "acceptance_criteria": [
+    "Windows/macOS/Linux builds install and launch successfully",
+    "Desktop uses the same UI and backend as web (no duplicate UI code)",
+    "No production DB reset/seed is possible from desktop production build",
+    "Auth + realtime gameplay + archive all work end-to-end",
+    "CI produces installers on tag release"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "default",
+  "description": "Default capability for RoyalGambit desktop app",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "shell:allow-open"
+  ],
+  "remote": {
+    "urls": [
+      "https://*.supabase.co/*",
+      "wss://*.supabase.co/*"
+    ]
+  }
+}

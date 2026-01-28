@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Enable turbopack (Next.js 16+ default)
   turbopack: {},
-  
+
   // Image optimization
   images: {
     remotePatterns: [

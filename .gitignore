@@ -55,3 +55,7 @@ playwright-results.xml
 create-env.bat
 create-env.sh
 /playwright-report/
+
+# Tauri / Rust
+/src-tauri/target/
+.env.desktop.local
