@@ -39,11 +39,11 @@ export default function ArchivePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 });
 
+  const userId = user?.id;
+
   useEffect(() => {
-    if (!user?.id) {
-      if (isInitialized) {
-        setIsLoading(false);
-      }
+    if (!userId) {
+      setIsLoading(false);
       return;
     }
 
@@ -51,7 +51,7 @@ export default function ArchivePage() {
 
     const fetchGames = async () => {
       try {
-        const gamesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/games?select=*&or=(white_id.eq.${user.id},black_id.eq.${user.id})&status=eq.finished&order=created_at.desc&limit=50`;
+        const gamesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/games?select=*&or=(white_id.eq.${userId},black_id.eq.${userId})&status=eq.finished&order=created_at.desc&limit=50`;
 
         const response = await fetch(gamesUrl, {
           headers: {
@@ -73,7 +73,7 @@ export default function ArchivePage() {
         // Calculate stats
         let wins = 0, losses = 0, draws = 0;
         (data || []).forEach((game: GameRecord) => {
-          const isWhite = game.white_id === user.id;
+          const isWhite = game.white_id === userId;
           if (game.result === '1/2-1/2') {
             draws++;
           } else if ((game.result === '1-0' && isWhite) || (game.result === '0-1' && !isWhite)) {
@@ -97,7 +97,7 @@ export default function ArchivePage() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, isInitialized]);
+  }, [userId]);
 
   const formatTimeControl = (tc: { baseMs: number; incrementMs: number }) => {
     const minutes = tc.baseMs / 60000;

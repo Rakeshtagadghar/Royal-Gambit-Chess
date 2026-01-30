@@ -54,6 +54,8 @@ export default function LeaderboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [userRank, setUserRank] = useState<LeaderboardEntry | null>(null);
 
+  const userId = user?.id;
+
   useEffect(() => {
     const fetchLeaderboard = async () => {
       setIsLoading(true);
@@ -65,11 +67,13 @@ export default function LeaderboardPage() {
         setLeaderboard(data.leaderboard || []);
 
         // Find user's rank if logged in
-        if (user) {
+        if (userId) {
           const userEntry = data.leaderboard?.find(
-            (entry: LeaderboardEntry) => entry.userId === user.id
+            (entry: LeaderboardEntry) => entry.userId === userId
           );
           setUserRank(userEntry || null);
+        } else {
+          setUserRank(null);
         }
       } catch (error) {
         console.error('Failed to fetch leaderboard:', error);
@@ -80,7 +84,7 @@ export default function LeaderboardPage() {
     };
 
     fetchLeaderboard();
-  }, [activeMode, user]);
+  }, [activeMode, userId]);
 
   const config = MODE_CONFIG[activeMode];
 

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { AvatarImage } from './avatar';
-import { getCachedImageUrl, preloadImage } from '@/lib/image-cache';
+import { getCachedImageUrl, preloadImage, getCachedImageUrlSync } from '@/lib/image-cache';
 
 interface CachedAvatarImageProps extends React.ComponentProps<typeof AvatarImage> {
   src?: string;
@@ -13,27 +13,27 @@ interface CachedAvatarImageProps extends React.ComponentProps<typeof AvatarImage
  * to prevent 429 rate limiting errors
  */
 export function CachedAvatarImage({ src, ...props }: CachedAvatarImageProps) {
-  const [cachedSrc, setCachedSrc] = React.useState<string | undefined>(undefined);
-  const [isLoading, setIsLoading] = React.useState(true);
+  // Check cache synchronously to avoid flicker on navigation
+  const initialCachedSrc = React.useMemo(() => {
+    if (!src) return undefined;
+    // For non-googleusercontent URLs, use directly
+    if (!src.includes('googleusercontent.com')) return src;
+    // Check if already in memory cache
+    return getCachedImageUrlSync(src);
+  }, [src]);
+
+  const [cachedSrc, setCachedSrc] = React.useState<string | undefined>(initialCachedSrc);
+  const [isLoading, setIsLoading] = React.useState(!initialCachedSrc && !!src);
 
   React.useEffect(() => {
+    // If we already have a cached source from sync check, skip async loading
+    if (initialCachedSrc || !src) {
+      return;
+    }
+
     let isMounted = true;
 
     async function loadImage() {
-      if (!src) {
-        setIsLoading(false);
-        return;
-      }
-
-      // For non-googleusercontent URLs, use directly
-      if (!src.includes('googleusercontent.com')) {
-        if (isMounted) {
-          setCachedSrc(src);
-          setIsLoading(false);
-        }
-        return;
-      }
-
       try {
         const url = await getCachedImageUrl(src);
         if (isMounted) {
@@ -54,7 +54,7 @@ export function CachedAvatarImage({ src, ...props }: CachedAvatarImageProps) {
     return () => {
       isMounted = false;
     };
-  }, [src]);
+  }, [src, initialCachedSrc]);
 
   // Preload the image on mount if it's a googleusercontent URL
   React.useEffect(() => {

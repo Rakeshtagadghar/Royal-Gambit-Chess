@@ -24,8 +24,6 @@ export default function AuthCallbackPage() {
       // Check for hash fragment (implicit flow)
       const hash = window.location.hash;
       if (hash && hash.includes('access_token')) {
-        console.log('🔵 Processing hash tokens...');
-        
         // Parse hash parameters
         const hashParams = new URLSearchParams(hash.substring(1));
         const accessToken = hashParams.get('access_token');
@@ -39,12 +37,10 @@ export default function AuthCallbackPage() {
           });
           
           if (sessionError) {
-            console.error('🔴 Session error:', sessionError);
             setError(sessionError.message);
             return;
           }
           
-          console.log('🔵 Session set successfully from hash');
           router.push('/play');
           return;
         }
@@ -66,7 +62,6 @@ export default function AuthCallbackPage() {
       // Try to get existing session (might have been set by auth listener)
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        console.log('🔵 Session found, redirecting...');
         router.push('/play');
         return;
       }

@@ -145,6 +145,34 @@ function base64ToBlobUrl(base64: string, contentType: string): string {
 }
 
 /**
+ * Synchronously check if an image URL is already in the memory cache
+ * Returns the cached blob URL if available, undefined otherwise
+ */
+export function getCachedImageUrlSync(url: string): string | undefined {
+  if (!url) return undefined;
+
+  // Only handle googleusercontent images
+  if (!url.includes('googleusercontent.com')) {
+    return url;
+  }
+
+  // Check in-memory blob cache
+  if (blobUrlCache.has(url)) {
+    return blobUrlCache.get(url);
+  }
+
+  // Check if we have it in localStorage and create blob URL synchronously
+  const cached = getCachedData(url);
+  if (cached) {
+    const blobUrl = base64ToBlobUrl(cached.data, cached.contentType);
+    blobUrlCache.set(url, blobUrl);
+    return blobUrl;
+  }
+
+  return undefined;
+}
+
+/**
  * Fetch and cache an image, returning a blob URL
  */
 export async function getCachedImageUrl(url: string): Promise<string> {

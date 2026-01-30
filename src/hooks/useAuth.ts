@@ -74,8 +74,6 @@ async function loadOrCreateProfile(
     (meta.avatar_url as string | undefined) ||
     null;
 
-  console.log('🟡 Upserting profile:', { id: user.id, username, displayName, avatarUrl });
-
   const { data: upserted, error: upsertError } = await supabase
     .from('profiles')
     .upsert(
@@ -99,58 +97,50 @@ async function loadOrCreateProfile(
   return upserted ?? null;
 }
 
+// Track if auth has been initialized globally to prevent re-initialization
+let authInitStarted = false;
+
 export function useAuth() {
   const { user, profile, isLoading, isInitialized, setUser, setProfile, setIsLoading, setIsInitialized, reset } = useAuthStore();
 
   useEffect(() => {
+    // Only run initialization once across all component instances
+    if (authInitStarted) {
+      return;
+    }
+    authInitStarted = true;
+
     const supabase = getSupabaseClient();
     let didTimeout = false;
+    let didCleanup = false;
 
     // Get initial session
     const initAuth = async () => {
       try {
-        console.log('🔵 Starting initAuth');
-        
-        // Clear any potentially corrupted auth data
-        const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0];
-        const storageKey = `sb-${projectRef}-auth-token`;
-        const storedData = localStorage.getItem(storageKey);
-        console.log('🔵 Stored auth data exists:', !!storedData);
-        
-        // Try getUser() instead of getSession() - it's more direct
-        console.log('🔵 Calling supabase.auth.getUser()...');
+        // Use getUser() with timeout to prevent infinite loading
         const userPromise = supabase.auth.getUser();
         const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Auth fetch timeout')), 5000)
         );
 
-        const { data: { user: authUser }, error: userError } = await Promise.race([
+        const { data: { user: authUser } } = await Promise.race([
           userPromise,
           timeoutPromise,
-        ]).catch((err) => {
-          console.warn('⚠️ Auth fetch failed or timed out:', err);
-          return { data: { user: null }, error: err };
+        ]).catch(() => {
+          return { data: { user: null }, error: null };
         });
 
-        if (didTimeout) return;
-
-        if (userError) {
-          console.log('🔵 Auth check result (no user or error):', userError.message);
-        }
-
-        console.log('🔵 User result:', { hasUser: !!authUser, userId: authUser?.id, userEmail: authUser?.email });
+        if (didTimeout || didCleanup) return;
 
         if (authUser) {
           setUser(authUser);
 
           const profileData = await loadOrCreateProfile(supabase, authUser);
 
-          if (profileData) {
+          if (profileData && !didCleanup) {
             const mappedProfile = mapDbProfileToProfile(profileData);
-            console.log('🔵 Profile loaded and mapped:', mappedProfile);
             setProfile(mappedProfile);
-          } else {
-            console.log('🔴 No profile data available for user');
+          } else if (!didCleanup) {
             setProfile(null);
           }
         } else {
@@ -159,10 +149,12 @@ export function useAuth() {
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setUser(null);
-        setProfile(null);
+        if (!didCleanup) {
+          setUser(null);
+          setProfile(null);
+        }
       } finally {
-        if (!didTimeout) {
+        if (!didTimeout && !didCleanup) {
           setIsLoading(false);
           setIsInitialized(true);
         }
@@ -172,29 +164,39 @@ export function useAuth() {
     // Fallback timeout - ensure we always initialize even if something hangs
     const fallbackTimeout = setTimeout(() => {
       didTimeout = true;
-      console.warn('⚠️ Auth init fallback timeout triggered');
       setIsLoading(false);
       setIsInitialized(true);
     }, 6000);
 
     initAuth().finally(() => clearTimeout(fallbackTimeout));
 
-    // Listen for auth changes
+    // Listen for auth changes - this subscription persists for the app lifetime
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+      if (didCleanup) return;
+      
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
 
         const profileData = await loadOrCreateProfile(supabase, session.user);
-        if (profileData) setProfile(mapDbProfileToProfile(profileData));
+        if (profileData && !didCleanup) setProfile(mapDbProfileToProfile(profileData));
       } else if (event === 'SIGNED_OUT') {
         reset();
+        // Allow re-initialization after sign out
+        authInitStarted = false;
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // Update user on token refresh to keep data fresh
+        setUser(session.user);
       }
+      // Ignore INITIAL_SESSION event - we handle initial state ourselves
     });
 
     return () => {
+      didCleanup = true;
       subscription.unsubscribe();
     };
-  }, [setUser, setProfile, setIsLoading, setIsInitialized, reset]);
+    // Empty dependency array - this effect should only run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     const supabase = getSupabaseClient();
@@ -261,7 +263,6 @@ export function useAuth() {
 
   const signOut = async () => {
     const supabase = getSupabaseClient();
-    console.log('🔵 Starting signOut');
 
     try {
       // Add timeout to prevent hanging
@@ -271,9 +272,8 @@ export function useAuth() {
       );
 
       await Promise.race([signOutPromise, timeoutPromise]);
-      console.log('🔵 Supabase signOut success');
-    } catch (error) {
-      console.warn('⚠️ SignOut issue (continuing anyway):', error);
+    } catch {
+      // Continue with local cleanup even if signOut fails
     }
 
     // Always clear local state
@@ -295,7 +295,6 @@ export function useAuth() {
       }
     }
 
-    console.log('🔵 Cleared cookies and localStorage, redirecting...');
     window.location.href = '/';
   };
 
