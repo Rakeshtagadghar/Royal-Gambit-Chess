@@ -9,3 +9,4 @@ export { LessonCard } from './LessonCard';
 export { PracticePackCard } from './PracticePackCard';
 export { ProgressStats, StreakDisplay } from './ProgressStats';
 export { AchievementBadge, AchievementGrid, RecentAchievementCard } from './AchievementBadge';
+export { LearnCTA } from './LearnCTA';

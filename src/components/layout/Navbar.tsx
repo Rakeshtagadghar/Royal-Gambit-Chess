@@ -26,18 +26,21 @@ import {
   X,
   Trophy,
   GraduationCap,
+  BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 
 const publicNavItems = [
   { href: '/play', label: 'Play', icon: Gamepad2 },
+  { href: '/learn', label: 'Learn', icon: GraduationCap },
+  { href: '/chess-guides', label: 'Guides', icon: BookOpen },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/archive', label: 'Archive', icon: Archive },
 ];
 
 const authNavItems = [
   { href: '/play', label: 'Play', icon: Gamepad2 },
   { href: '/learn', label: 'Learn', icon: GraduationCap },
+  { href: '/chess-guides', label: 'Guides', icon: BookOpen },
   { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
   { href: '/archive', label: 'Archive', icon: Archive },
 ];

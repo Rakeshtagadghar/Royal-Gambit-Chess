@@ -3,11 +3,29 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, ArrowLeft, Crown, Target, Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, ArrowLeft, Crown, Target, Heart, BookOpen, Bot, Shield, ChevronRight } from "lucide-react";
+import { BASE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
-  title: "About Us - RoyalGambit",
-  description: "Learn about RoyalGambit, the modern chess platform built with passion for the game.",
+  title: "About Us - RoyalGambit Chess Platform",
+  description: "Learn about RoyalGambit, the modern chess platform built with passion for the game. Free lessons, AI opponents, and real-time multiplayer chess.",
+  keywords: ["about RoyalGambit", "chess platform", "learn chess online", "online chess"],
+  alternates: {
+    canonical: `${BASE_URL}/about`,
+  },
+  openGraph: {
+    title: "About Us - RoyalGambit Chess Platform",
+    description: "Learn about RoyalGambit, the modern chess platform built with passion for the game. Free lessons, AI opponents, and real-time multiplayer.",
+    url: `${BASE_URL}/about`,
+    siteName: "RoyalGambit",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "About Us - RoyalGambit Chess Platform",
+    description: "Learn about RoyalGambit, the modern chess platform built with passion for the game.",
+  },
 };
 
 export default function AboutPage() {
@@ -118,9 +136,71 @@ export default function AboutPage() {
             </section>
           </CardContent>
         </Card>
+
+        {/* CTA Section */}
+        <div className="mt-8 text-center">
+          <h2 className="text-2xl font-bold mb-4">Ready to Start Your Chess Journey?</h2>
+          <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
+            Explore our free chess guides or jump into a game against our AI.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg">
+              <Link href="/learn/chess-basics">
+                Start Learning
+                <ChevronRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/play">Play Now</Link>
+            </Button>
+          </div>
+        </div>
       </main>
 
       <Footer />
+
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "RoyalGambit",
+            url: BASE_URL,
+            description: "A modern chess platform for learning and playing chess online.",
+            founder: {
+              "@type": "Person",
+              name: "Rakesh Tagadghar",
+            },
+          }),
+        }}
+      />
+
+      {/* Breadcrumb Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            itemListElement: [
+              {
+                "@type": "ListItem",
+                position: 1,
+                name: "Home",
+                item: BASE_URL,
+              },
+              {
+                "@type": "ListItem",
+                position: 2,
+                name: "About",
+                item: `${BASE_URL}/about`,
+              },
+            ],
+          }),
+        }}
+      />
     </div>
   );
 }

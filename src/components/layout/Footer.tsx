@@ -36,13 +36,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Leaderboard
+                <Link href="/chess-guides" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Chess Guides
                 </Link>
               </li>
               <li>
-                <Link href="/bot" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Play vs Bot
+                <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Leaderboard
                 </Link>
               </li>
             </ul>

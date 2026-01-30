@@ -1,0 +1,402 @@
+{
+    "spec_name": "SEO Content Update",
+    "spec_version": "1.0.0",
+    "project": {
+      "name": "Royal Gambit Chess",
+      "base_url": "https://royal-gambit-chess.vercel.app",
+      "framework": "Next.js App Router + TypeScript",
+      "deployment": "Vercel",
+      "goal": "Add public, indexable, original content pages and improve SEO."
+    },
+    "non_goals": [
+      "Do not add ads or AdSense scripts in this spec.",
+      "Do not require login to access the new content pages."
+    ],
+    "success_criteria": [
+      "At least 6 publicly accessible, crawlable pages exist with meaningful text content and internal links.",
+      "All new pages are server-rendered with readable HTML (no content hidden until JS).",
+      "Sitemap includes all new routes and is accessible at /sitemap.xml.",
+      "Robots allow crawling of public pages and static assets.",
+      "Each new page has unique title, meta description, and canonical URL.",
+      "Home page has a content section visible without interaction."
+    ],
+    "routes_to_add": {
+      "home": {
+        "route": "/",
+        "change": "Add SEO content sections below hero and ensure they are server-rendered."
+      },
+      "public_pages": [
+        {
+          "route": "/about",
+          "type": "static_content",
+          "format": "MDX",
+          "word_count_target": 800,
+          "primary_keywords": [
+            "learn chess online",
+            "chess practice",
+            "chess lessons",
+            "play chess"
+          ]
+        },
+        {
+          "route": "/how-it-works",
+          "type": "static_content",
+          "format": "MDX",
+          "word_count_target": 800,
+          "primary_keywords": [
+            "how to learn chess",
+            "interactive chess lessons",
+            "practice chess puzzles",
+            "play vs computer"
+          ]
+        },
+        {
+          "route": "/chess-guides",
+          "type": "hub_page",
+          "format": "MDX",
+          "word_count_target": 900,
+          "primary_keywords": ["chess guides", "chess basics", "chess openings", "chess endgames"],
+          "children_links": [
+            "/learn/chess-basics",
+            "/learn/opening-principles",
+            "/learn/essential-endgames",
+            "/learn/strategic-thinking"
+          ]
+        },
+        {
+          "route": "/privacy-policy",
+          "type": "legal",
+          "format": "MDX",
+          "word_count_target": 600,
+          "primary_keywords": ["privacy policy"]
+        },
+        {
+          "route": "/terms",
+          "type": "legal",
+          "format": "MDX",
+          "word_count_target": 600,
+          "primary_keywords": ["terms and conditions"]
+        },
+        {
+          "route": "/contact",
+          "type": "static_content",
+          "format": "MDX",
+          "word_count_target": 400,
+          "primary_keywords": ["contact"]
+        }
+      ],
+      "learn_public_hub": [
+        {
+          "route": "/learn",
+          "type": "public_hub",
+          "format": "RSC_page",
+          "render_mode": "server",
+          "content_blocks": [
+            "Intro section explaining Learn tracks (public, indexable text)",
+            "Cards linking to public track overview pages",
+            "FAQ snippet (3-6 Q/A)"
+          ],
+          "links_to": [
+            "/learn/chess-basics",
+            "/learn/opening-principles",
+            "/learn/essential-endgames",
+            "/learn/strategic-thinking"
+          ]
+        }
+      ],
+      "learn_public_track_pages": [
+        {
+          "route": "/learn/chess-basics",
+          "type": "track_overview",
+          "format": "MDX_or_RSC",
+          "word_count_target": 1200,
+          "must_include": [
+            "How each chess piece moves (pawn/knight/rook/bishop/queen/king)",
+            "Special moves: castling, promotion, en passant",
+            "Check/checkmate/stalemate explanation",
+            "Links to interactive lessons inside app (CTA buttons)"
+          ],
+          "cta_links": [
+            {
+              "label": "Start Chess Basics lessons",
+              "href": "/learn/track/beginner-basics"
+            }
+          ]
+        },
+        {
+          "route": "/learn/opening-principles",
+          "type": "track_overview",
+          "format": "MDX_or_RSC",
+          "word_count_target": 1100,
+          "must_include": [
+            "Development, center control, king safety",
+            "Common opening mistakes",
+            "Practical repertoire approach (plans not memorization)",
+            "Links to interactive Opening Principles lessons"
+          ],
+          "cta_links": [
+            {
+              "label": "Start Opening Principles",
+              "href": "/learn/track/intermediate-openings"
+            }
+          ]
+        },
+        {
+          "route": "/learn/essential-endgames",
+          "type": "track_overview",
+          "format": "MDX_or_RSC",
+          "word_count_target": 1100,
+          "must_include": [
+            "King activity & opposition",
+            "Key squares in pawn endings",
+            "Basic mates (K+Q, K+R)",
+            "Rook endgame activity",
+            "Links to interactive Endgames lessons"
+          ],
+          "cta_links": [
+            {
+              "label": "Start Essential Endgames",
+              "href": "/learn/track/intermediate-endgames"
+            }
+          ]
+        },
+        {
+          "route": "/learn/strategic-thinking",
+          "type": "track_overview",
+          "format": "MDX_or_RSC",
+          "word_count_target": 1100,
+          "must_include": [
+            "How to evaluate positions using imbalances",
+            "Pawn structures & plans",
+            "Outposts and good vs bad bishop",
+            "Prophylaxis and converting advantages",
+            "Links to interactive Strategy lessons"
+          ],
+          "cta_links": [
+            {
+              "label": "Start Strategic Thinking",
+              "href": "/learn/track/advanced-strategy"
+            }
+          ]
+        }
+      ]
+    },
+    "content_authoring": {
+      "format": "MDX (recommended) OR TS content objects rendered by RSC",
+      "requirements": [
+        "All text must be original (no copy/paste from other chess sites).",
+        "No AI-filler paragraphs; each section must be meaningful and specific.",
+        "Use headings (H1, H2, H3) and bullet lists where appropriate.",
+        "Add internal links between guides and Learn pages."
+      ],
+      "mdx_frontmatter_schema": {
+        "title": "string",
+        "description": "string",
+        "canonical": "string",
+        "lastUpdated": "YYYY-MM-DD",
+        "keywords": "string[]"
+      }
+    },
+    "seo_requirements": {
+      "metadata": {
+        "use_next_metadata_api": true,
+        "per_page": [
+          "title",
+          "description",
+          "alternates.canonical",
+          "openGraph (title, description, url, siteName, type)",
+          "twitter (card, title, description)"
+        ]
+      },
+      "structured_data": {
+        "enabled": true,
+        "types": [
+          {
+            "type": "WebSite",
+            "fields": ["name", "url", "potentialAction(SearchAction)"]
+          },
+          {
+            "type": "BreadcrumbList",
+            "fields": ["itemListElement"]
+          },
+          {
+            "type": "FAQPage",
+            "pages": ["/learn", "/how-it-works"],
+            "min_items": 3,
+            "max_items": 8
+          }
+        ]
+      },
+      "canonical_rules": [
+        "Every public page must define a canonical URL.",
+        "Canonical must match production domain (royal-gambit-chess.vercel.app)."
+      ],
+      "indexing_rules": [
+        "Public content routes must NOT be noindex.",
+        "Auth pages can remain noindex (optional)."
+      ]
+    },
+    "sitemap_and_robots": {
+      "robots_txt": {
+        "route": "/robots.txt",
+        "allow": ["/", "/learn", "/learn/*", "/chess-guides", "/about", "/how-it-works", "/privacy-policy", "/terms", "/contact"],
+        "disallow": ["/api/*", "/_next/*", "/admin/*"],
+        "sitemap": "/sitemap.xml"
+      },
+      "sitemap_xml": {
+        "route": "/sitemap.xml",
+        "generation": "dynamic at build time or runtime",
+        "must_include_routes": [
+          "/",
+          "/learn",
+          "/learn/chess-basics",
+          "/learn/opening-principles",
+          "/learn/essential-endgames",
+          "/learn/strategic-thinking",
+          "/chess-guides",
+          "/about",
+          "/how-it-works",
+          "/privacy-policy",
+          "/terms",
+          "/contact"
+        ],
+        "changefreq": "weekly",
+        "priority": {
+          "/": 1.0,
+          "/learn": 0.9,
+          "/learn/chess-basics": 0.9,
+          "/chess-guides": 0.8,
+          "default": 0.6
+        }
+      }
+    },
+    "home_page_update": {
+      "requirements": [
+        "Keep existing hero/CTA to play.",
+        "Add below-hero content sections with at least 500-800 words total.",
+        "Add 4 internal links to /learn/* track pages and /chess-guides.",
+        "Add 'Why Royal Gambit' section describing features in plain text (no Game Review education)."
+      ],
+      "sections": [
+        {
+          "heading": "Learn Chess Online — Step by Step",
+          "bullets": [
+            "Beginner-friendly chess basics",
+            "Interactive lessons and practice",
+            "Openings, endgames, and strategy tracks",
+            "Play vs AI or friends"
+          ]
+        },
+        {
+          "heading": "What You Can Learn",
+          "cards": [
+            { "title": "Chess Basics", "href": "/learn/chess-basics" },
+            { "title": "Opening Principles", "href": "/learn/opening-principles" },
+            { "title": "Essential Endgames", "href": "/learn/essential-endgames" },
+            { "title": "Strategic Thinking", "href": "/learn/strategic-thinking" }
+          ]
+        },
+        {
+          "heading": "FAQ",
+          "faq_items": [
+            {
+              "q": "Is Royal Gambit Chess free to use?",
+              "a": "Yes, the learning content and play features are available to get started without payment."
+            },
+            {
+              "q": "Do I need an account to read the guides?",
+              "a": "No. All guide pages are public. An account is only needed to track progress."
+            },
+            {
+              "q": "What level is this for?",
+              "a": "From complete beginner to advanced learners through structured tracks."
+            }
+          ]
+        }
+      ]
+    },
+    "navigation_updates": {
+      "header_nav": [
+        { "label": "Play", "href": "/play" },
+        { "label": "Learn", "href": "/learn" },
+        { "label": "Guides", "href": "/chess-guides" },
+        { "label": "About", "href": "/about" }
+      ],
+      "footer_nav": [
+        { "label": "Privacy Policy", "href": "/privacy-policy" },
+        { "label": "Terms", "href": "/terms" },
+        { "label": "Contact", "href": "/contact" }
+      ]
+    },
+    "ui_requirements": {
+      "design": "Use existing app design system (Tailwind/shadcn). Keep pages readable and content-first.",
+      "components": [
+        "PageContainer",
+        "ProseContent (MDX typography)",
+        "Breadcrumbs",
+        "CTAButtonRow",
+        "GuideCardGrid",
+        "FAQAccordion"
+      ],
+      "accessibility": [
+        "Single H1 per page",
+        "Semantic headings order",
+        "Keyboard-accessible accordions",
+        "Sufficient contrast"
+      ]
+    },
+    "implementation_plan": [
+      {
+        "step": 1,
+        "task": "Add new routes and basic MDX rendering support (or existing MDX setup)."
+      },
+      {
+        "step": 2,
+        "task": "Create content pages (/about, /how-it-works, /chess-guides, /privacy-policy, /terms, /contact) with original text."
+      },
+      {
+        "step": 3,
+        "task": "Create public Learn hub and 4 public track overview pages that link to interactive learn routes."
+      },
+      {
+        "step": 4,
+        "task": "Update homepage to include content sections and internal links."
+      },
+      {
+        "step": 5,
+        "task": "Add metadata, canonical tags, JSON-LD structured data (WebSite, BreadcrumbList, FAQPage)."
+      },
+      {
+        "step": 6,
+        "task": "Add robots.txt and sitemap.xml generation."
+      }
+    ],
+    "testing_acceptance": {
+      "manual_checks": [
+        "Open each new page in an incognito window: content visible immediately (no login).",
+        "View page source: confirm substantial text exists in HTML output.",
+        "Check meta title/description/canonical for each page.",
+        "Open /robots.txt and /sitemap.xml and confirm contents are correct.",
+        "Internal links work and do not redirect to login."
+      ],
+      "lighthouse": {
+        "targets": {
+          "seo_score_min": 90,
+          "accessibility_score_min": 90,
+          "performance_score_min": 70
+        },
+        "notes": [
+          "Performance can be lower due to chess app assets, but content pages should be fast."
+        ]
+      },
+      "crawl_simulation": [
+        "Use a simple fetch/curl to verify HTML includes headings and paragraphs.",
+        "Ensure no 'noindex' on public pages."
+      ]
+    },
+    "request_review_readiness": {
+      "minimum_pages_required": 6,
+      "recommended_wait": "After deploying, wait until pages are accessible and indexed in Search Console (optional) before requesting AdSense review."
+    }
+  }
+  

@@ -25,6 +25,7 @@ function LoginContent() {
   const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authTimedOut, setAuthTimedOut] = useState(false);
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
@@ -32,6 +33,17 @@ function LoginContent() {
       router.push(redirect);
     }
   }, [isInitialized, isAuthenticated, router, searchParams]);
+
+  // Safety timeout - if auth doesn't initialize within 5 seconds, show the form anyway
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn('Auth initialization timed out, showing login form');
+        setAuthTimedOut(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timeout);
+  }, [isInitialized]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,8 +103,8 @@ function LoginContent() {
     setIsSubmitting(false);
   };
 
-  // Show loading while checking initial auth state
-  if (!isInitialized) {
+  // Show loading while checking initial auth state (with timeout fallback)
+  if (!isInitialized && !authTimedOut) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

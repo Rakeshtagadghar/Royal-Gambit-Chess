@@ -1,350 +1,347 @@
-'use client';
-
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { Metadata } from 'next';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { TrackCard, PracticePackCard, StreakDisplay } from '@/components/learn';
-import {
-  LearnTrackWithProgress,
-  LearnPracticePack,
-  LearnUserStreak,
-  LEVEL_LABELS,
-  LEVEL_COLORS,
-} from '@/types/learn';
-import { useAuth } from '@/hooks/useAuth';
-import { learnApi } from '@/lib/api/urls';
-import { cn } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   BookOpen,
   Target,
-  TrendingUp,
   ChevronRight,
-  Sparkles,
   GraduationCap,
+  Crown,
+  Swords,
+  Flag,
+  Brain,
+  Puzzle,
+  Award,
+  Flame,
 } from 'lucide-react';
+import { BASE_URL } from '@/lib/config';
+import { LearnCTA } from '@/components/learn/LearnCTA';
 
-interface RecommendedLesson {
-  lesson: {
-    id: string;
-    slug: string;
-    title: string;
-    topic: string;
-    level: string;
-    estimatedMinutes: number;
-  };
-  track: {
-    id: string;
-    slug: string;
-    title: string;
-  };
-  status: string;
-}
+export const metadata: Metadata = {
+  title: 'Learn Chess - Interactive Lessons & Tutorials | RoyalGambit',
+  description:
+    'Learn chess with interactive lessons, from beginner basics to advanced strategy. Free chess tutorials covering openings, endgames, tactics, and more. Track your progress.',
+  keywords: [
+    'learn chess',
+    'chess lessons',
+    'chess tutorials',
+    'chess for beginners',
+    'interactive chess',
+    'chess course',
+    'improve at chess',
+  ],
+  alternates: {
+    canonical: `${BASE_URL}/learn`,
+  },
+  openGraph: {
+    title: 'Learn Chess - Interactive Lessons & Tutorials | RoyalGambit',
+    description:
+      'Learn chess with interactive lessons, from beginner basics to advanced strategy. Free chess tutorials covering openings, endgames, tactics, and more.',
+    url: `${BASE_URL}/learn`,
+    siteName: 'RoyalGambit',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Learn Chess - Interactive Lessons & Tutorials | RoyalGambit',
+    description:
+      'Learn chess with interactive lessons, from beginner basics to advanced strategy. Free tutorials and progress tracking.',
+  },
+};
 
-export default function LearnHubPage() {
-  const { isAuthenticated } = useAuth();
-  const [tracks, setTracks] = useState<LearnTrackWithProgress[]>([]);
-  const [recommendedLesson, setRecommendedLesson] = useState<RecommendedLesson | null>(null);
-  const [practicePacks, setPracticePacks] = useState<(LearnPracticePack & { puzzleCount?: number })[]>([]);
-  const [streak, setStreak] = useState<LearnUserStreak | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('tracks');
+const learningTracks = [
+  {
+    title: 'Chess Basics',
+    level: 'Beginner',
+    levelColor: 'bg-green-500',
+    icon: Crown,
+    description: 'Learn how each piece moves, special rules, and basic checkmate patterns.',
+    href: '/learn/chess-basics',
+    trackHref: '/learn/track/beginner-basics',
+    topics: ['Piece movement', 'Castling & en passant', 'Check & checkmate', 'Basic mates'],
+  },
+  {
+    title: 'Opening Principles',
+    level: 'Intermediate',
+    levelColor: 'bg-blue-500',
+    icon: Swords,
+    description: 'Master center control, piece development, and king safety fundamentals.',
+    href: '/learn/opening-principles',
+    trackHref: '/learn/track/intermediate-openings',
+    topics: ['Center control', 'Development', 'King safety', 'Common mistakes'],
+  },
+  {
+    title: 'Essential Endgames',
+    level: 'Intermediate',
+    levelColor: 'bg-blue-500',
+    icon: Flag,
+    description: 'Learn critical endgame techniques to convert advantages into wins.',
+    href: '/learn/essential-endgames',
+    trackHref: '/learn/track/intermediate-endgames',
+    topics: ['King activity', 'Opposition', 'Basic mates', 'Rook endgames'],
+  },
+  {
+    title: 'Strategic Thinking',
+    level: 'Advanced',
+    levelColor: 'bg-purple-500',
+    icon: Brain,
+    description: 'Develop positional understanding, planning skills, and prophylaxis.',
+    href: '/learn/strategic-thinking',
+    trackHref: '/learn/track/advanced-strategy',
+    topics: ['Imbalances', 'Pawn structures', 'Outposts', 'Converting advantages'],
+  },
+];
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadLearnHub();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+const features = [
+  {
+    icon: BookOpen,
+    title: 'Interactive Lessons',
+    description: 'Practice directly on the chessboard with step-by-step guided instruction.',
+  },
+  {
+    icon: Puzzle,
+    title: 'Tactical Puzzles',
+    description: 'Sharpen your skills with themed puzzle packs targeting specific patterns.',
+  },
+  {
+    icon: Award,
+    title: 'Achievements & Progress',
+    description: 'Track your improvement with detailed stats, badges, and learning streaks.',
+  },
+  {
+    icon: Flame,
+    title: 'Learning Streaks',
+    description: 'Stay motivated by maintaining daily learning streaks and building consistency.',
+  },
+];
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <main className="container mx-auto px-4 py-8 text-center">
-          <GraduationCap className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h1 className="text-2xl font-bold mb-2">Learn Chess</h1>
-          <p className="text-muted-foreground mb-4">Sign in to access lessons and track your progress</p>
-          <Button asChild>
-            <Link href="/login?redirect=/learn">Sign In</Link>
-          </Button>
-        </main>
-      </div>
-    );
-  }
+const faqs = [
+  {
+    question: 'Do I need an account to read the guides?',
+    answer:
+      'No! All our chess guides (Chess Basics, Opening Principles, Essential Endgames, Strategic Thinking) are freely accessible without an account. You only need to sign in to access interactive lessons and track your progress.',
+  },
+  {
+    question: 'What level are the lessons designed for?',
+    answer:
+      'We have content for all levels. Beginners can start with Chess Basics to learn the rules. Intermediate players can improve openings and endgames. Advanced players can develop strategic thinking.',
+  },
+  {
+    question: 'How do interactive lessons work?',
+    answer:
+      'Each interactive lesson guides you through concepts step-by-step. You make moves on a real chessboard, get immediate feedback, and can\'t proceed until you find the correct move. This ensures you truly understand each concept.',
+  },
+  {
+    question: 'Is the learning content really free?',
+    answer:
+      'Yes! All guides and lessons are free. Create an account to unlock progress tracking, achievements, and learning streaks at no cost.',
+  },
+  {
+    question: 'How long does it take to complete a track?',
+    answer:
+      'Each track contains multiple lessons and takes several hours to complete thoroughly. But you can learn at your own pace—there\'s no time limit, and you can revisit any lesson.',
+  },
+  {
+    question: 'Can I skip ahead to advanced content?',
+    answer:
+      'Absolutely. While we recommend following the learning path in order, you\'re free to start with any guide or track that matches your current level.',
+  },
+];
 
-  async function loadLearnHub() {
-    setLoading(true);
-
-    try {
-      // Fetch all data in parallel
-      const [tracksRes, packsRes, recommendedRes] = await Promise.all([
-        fetch(learnApi.tracks()),
-        fetch(learnApi.practicePacks()),
-        fetch(learnApi.recommended()),
-      ]);
-
-      // Process tracks
-      if (tracksRes.ok) {
-        const { tracks: tracksData } = await tracksRes.json();
-        setTracks(tracksData || []);
-      }
-
-      // Process practice packs
-      if (packsRes.ok) {
-        const { packs: packsData } = await packsRes.json();
-        setPracticePacks(packsData || []);
-      }
-
-      // Process recommended lesson
-      if (recommendedRes.ok) {
-        const { recommendation } = await recommendedRes.json();
-        setRecommendedLesson(recommendation);
-      }
-
-      // Fetch progress/streak if authenticated
-      if (isAuthenticated) {
-        const progressRes = await fetch(learnApi.progress());
-        if (progressRes.ok) {
-          const progressData = await progressRes.json();
-          if (progressData.streak) {
-            setStreak({
-              id: progressData.streak.id,
-              userId: '',
-              currentStreak: progressData.streak.currentStreak,
-              longestStreak: progressData.streak.longestStreak,
-              lastActivityDate: progressData.streak.lastActivityDate,
-              updatedAt: '',
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error loading learn hub:', error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
+export default function LearnPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="flex-1">
         {/* Hero Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <section className="container mx-auto px-4 py-12 max-w-5xl">
+          <div className="flex items-center gap-3 mb-6">
+            <GraduationCap className="h-10 w-10 text-primary" />
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
-                <GraduationCap className="w-8 h-8 text-primary" />
-                Learn Chess
-              </h1>
-              <p className="text-muted-foreground mt-1">
-                Master chess from beginner to expert with interactive lessons and puzzles
+              <h1 className="text-4xl font-bold">Learn Chess</h1>
+              <p className="text-muted-foreground text-lg">
+                Interactive lessons and guides for every skill level
               </p>
             </div>
-
-            {isAuthenticated && (
-              <Link href="/learn/progress">
-                <Button variant="outline" className="gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  View Progress
-                </Button>
-              </Link>
-            )}
           </div>
-        </motion.div>
 
-        {/* Recommended Next & Streak */}
-        {(recommendedLesson || streak) && (
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            {recommendedLesson && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-primary" />
-                      <CardTitle className="text-sm font-medium text-primary">
-                        Recommended Next
-                      </CardTitle>
+          <p className="text-lg text-muted-foreground mb-4 max-w-3xl">
+            Whether you're picking up chess for the first time or looking to sharpen your skills,
+            RoyalGambit offers structured learning tracks that take you from beginner to advanced
+            player. Our interactive lessons let you practice on a real chessboard with immediate
+            feedback.
+          </p>
+          <p className="text-muted-foreground max-w-3xl mb-8">
+            Start with our free guides below, or sign in to access interactive lessons,
+            track your progress, and earn achievements as you improve.
+          </p>
+
+          <LearnCTA variant="hero" />
+        </section>
+
+        {/* Learning Tracks Section */}
+        <section className="bg-muted/30 py-16">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <h2 className="text-3xl font-bold mb-4 text-center">Learning Tracks</h2>
+            <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+              Follow our structured learning path from beginner to advanced, or jump to the
+              track that matches your level
+            </p>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {learningTracks.map((track) => (
+                <Card key={track.title} className="overflow-hidden">
+                  <div className={`h-1 ${track.levelColor}`} />
+                  <CardHeader>
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <track.icon className="h-6 w-6 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-xs font-semibold px-2 py-1 rounded-full ${track.levelColor} text-white`}>
+                            {track.level}
+                          </span>
+                        </div>
+                        <CardTitle className="text-xl">{track.title}</CardTitle>
+                        <CardDescription className="mt-1">
+                          {track.description}
+                        </CardDescription>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Link href={`/learn/lesson/${recommendedLesson.lesson.slug}`}>
-                      <div className="flex items-center justify-between group cursor-pointer">
-                        <div>
-                          <h3 className="font-semibold group-hover:text-primary transition-colors">
-                            {recommendedLesson.lesson.title}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {recommendedLesson.lesson.estimatedMinutes} min
-                          </p>
-                        </div>
-                        <Button size="sm" className="gap-2">
-                          {recommendedLesson.status === 'in_progress'
-                            ? 'Continue'
-                            : 'Start'}
-                          <ChevronRight className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </Link>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {track.topics.map((topic) => (
+                        <span key={topic} className="text-xs bg-muted px-2 py-1 rounded-md">
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button asChild size="sm">
+                        <Link href={track.href}>Read Guide</Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={track.trackHref}>
+                          Interactive Lessons
+                          <ChevronRight className="ml-1 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              </motion.div>
-            )}
-
-            {streak && isAuthenticated && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <StreakDisplay
-                  currentStreak={streak.currentStreak}
-                  longestStreak={streak.longestStreak}
-                />
-              </motion.div>
-            )}
-          </div>
-        )}
-
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="tracks" className="gap-2">
-              <BookOpen className="w-4 h-4" />
-              Learning Tracks
-            </TabsTrigger>
-            <TabsTrigger value="practice" className="gap-2">
-              <Target className="w-4 h-4" />
-              Practice
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="tracks">
-            {loading ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="h-4 bg-muted rounded w-20 mb-4" />
-                      <div className="h-6 bg-muted rounded w-3/4 mb-2" />
-                      <div className="h-4 bg-muted rounded w-full mb-4" />
-                      <div className="h-2 bg-muted rounded w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : tracks.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {tracks.map((track, index) => (
-                  <TrackCard key={track.id} track={track} index={index} />
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No tracks available yet</h3>
-                  <p className="text-muted-foreground">
-                    Learning tracks are coming soon. Check back later!
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Level Descriptions */}
-            <div className="mt-12">
-              <h2 className="text-xl font-semibold mb-4">Learning Path</h2>
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {(['beginner', 'intermediate', 'advanced', 'expert'] as const).map(
-                  (level, index) => (
-                    <motion.div
-                      key={level}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <Card>
-                        <CardContent className="p-4">
-                          <Badge
-                            variant="outline"
-                            className={cn('mb-2', LEVEL_COLORS[level])}
-                          >
-                            {LEVEL_LABELS[level]}
-                          </Badge>
-                          <p className="text-sm text-muted-foreground">
-                            {getLevelDescription(level)}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  )
-                )}
-              </div>
+              ))}
             </div>
-          </TabsContent>
+          </div>
+        </section>
 
-          <TabsContent value="practice">
-            {loading ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-6">
-                      <div className="h-4 bg-muted rounded w-20 mb-4" />
-                      <div className="h-6 bg-muted rounded w-3/4 mb-4" />
-                      <div className="h-2 bg-muted rounded w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : practicePacks.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {practicePacks.map((pack, index) => (
-                  <PracticePackCard key={pack.id} pack={pack} index={index} />
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Target className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No practice packs yet</h3>
-                  <p className="text-muted-foreground">
-                    Practice packs are coming soon. Check back later!
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+        {/* Features Section */}
+        <section className="py-16">
+          <div className="container mx-auto px-4 max-w-5xl">
+            <h2 className="text-3xl font-bold mb-4 text-center">Why Learn with RoyalGambit?</h2>
+            <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
+              Our platform is designed to make learning chess effective and enjoyable
+            </p>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {features.map((feature) => (
+                <Card key={feature.title} className="text-center">
+                  <CardContent className="pt-6">
+                    <feature.icon className="h-10 w-10 mx-auto mb-3 text-primary" />
+                    <h3 className="font-semibold mb-2">{feature.title}</h3>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="bg-muted/30 py-16">
+          <div className="container mx-auto px-4 max-w-4xl">
+            <h2 className="text-3xl font-bold mb-4 text-center">Frequently Asked Questions</h2>
+            <p className="text-muted-foreground text-center mb-12">
+              Common questions about our learning platform
+            </p>
+
+            <div className="space-y-4">
+              {faqs.map((faq, index) => (
+                <Card key={index}>
+                  <CardContent className="p-6">
+                    <h3 className="font-semibold text-lg mb-2">{faq.question}</h3>
+                    <p className="text-muted-foreground">{faq.answer}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16">
+          <div className="container mx-auto px-4 max-w-3xl text-center">
+            <Target className="h-12 w-12 mx-auto mb-4 text-primary" />
+            <h2 className="text-3xl font-bold mb-4">Ready to Improve Your Chess?</h2>
+            <p className="text-muted-foreground mb-8">
+              Start with our free Chess Basics guide, or create an account to access
+              interactive lessons, puzzles, and track your progress over time.
+            </p>
+            <LearnCTA variant="bottom" />
+          </div>
+        </section>
       </main>
+
+      <Footer />
+
+      {/* FAQ Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faqs.map((faq) => ({
+              '@type': 'Question',
+              name: faq.question,
+              acceptedAnswer: {
+                '@type': 'Answer',
+                text: faq.answer,
+              },
+            })),
+          }),
+        }}
+      />
+
+      {/* Breadcrumb Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              {
+                '@type': 'ListItem',
+                position: 1,
+                name: 'Home',
+                item: BASE_URL,
+              },
+              {
+                '@type': 'ListItem',
+                position: 2,
+                name: 'Learn',
+                item: `${BASE_URL}/learn`,
+              },
+            ],
+          }),
+        }}
+      />
     </div>
   );
-}
-
-function getLevelDescription(level: string): string {
-  switch (level) {
-    case 'beginner':
-      return 'Learn the rules, piece movements, and basic checkmate patterns.';
-    case 'intermediate':
-      return 'Master opening principles, tactical motifs, and basic endgames.';
-    case 'advanced':
-      return 'Develop positional understanding, calculation skills, and complex endgames.';
-    case 'expert':
-      return 'Study deep strategy, advanced techniques, and master-level concepts.';
-    default:
-      return '';
-  }
 }

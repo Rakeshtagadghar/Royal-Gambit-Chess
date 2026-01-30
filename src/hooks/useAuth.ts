@@ -104,23 +104,46 @@ export function useAuth() {
 
   useEffect(() => {
     const supabase = getSupabaseClient();
+    let didTimeout = false;
 
     // Get initial session
     const initAuth = async () => {
       try {
         console.log('🔵 Starting initAuth');
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        // Clear any potentially corrupted auth data
+        const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0];
+        const storageKey = `sb-${projectRef}-auth-token`;
+        const storedData = localStorage.getItem(storageKey);
+        console.log('🔵 Stored auth data exists:', !!storedData);
+        
+        // Try getUser() instead of getSession() - it's more direct
+        console.log('🔵 Calling supabase.auth.getUser()...');
+        const userPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Auth fetch timeout')), 5000)
+        );
 
-        if (sessionError) {
-          console.error('🔴 Session error:', sessionError);
+        const { data: { user: authUser }, error: userError } = await Promise.race([
+          userPromise,
+          timeoutPromise,
+        ]).catch((err) => {
+          console.warn('⚠️ Auth fetch failed or timed out:', err);
+          return { data: { user: null }, error: err };
+        });
+
+        if (didTimeout) return;
+
+        if (userError) {
+          console.log('🔵 Auth check result (no user or error):', userError.message);
         }
 
-        console.log('🔵 Session result:', { hasSession: !!session, userId: session?.user?.id, userEmail: session?.user?.email });
+        console.log('🔵 User result:', { hasUser: !!authUser, userId: authUser?.id, userEmail: authUser?.email });
 
-        if (session?.user) {
-          setUser(session.user);
+        if (authUser) {
+          setUser(authUser);
 
-          const profileData = await loadOrCreateProfile(supabase, session.user);
+          const profileData = await loadOrCreateProfile(supabase, authUser);
 
           if (profileData) {
             const mappedProfile = mapDbProfileToProfile(profileData);
@@ -128,7 +151,6 @@ export function useAuth() {
             setProfile(mappedProfile);
           } else {
             console.log('🔴 No profile data available for user');
-            console.log('🔴 Current state - user exists:', !!session?.user);
             setProfile(null);
           }
         } else {
@@ -137,13 +159,25 @@ export function useAuth() {
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        setUser(null);
+        setProfile(null);
       } finally {
-        setIsLoading(false);
-        setIsInitialized(true);
+        if (!didTimeout) {
+          setIsLoading(false);
+          setIsInitialized(true);
+        }
       }
     };
 
-    initAuth();
+    // Fallback timeout - ensure we always initialize even if something hangs
+    const fallbackTimeout = setTimeout(() => {
+      didTimeout = true;
+      console.warn('⚠️ Auth init fallback timeout triggered');
+      setIsLoading(false);
+      setIsInitialized(true);
+    }, 6000);
+
+    initAuth().finally(() => clearTimeout(fallbackTimeout));
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
