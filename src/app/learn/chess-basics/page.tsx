@@ -8,7 +8,6 @@ import {
   Crown,
   ArrowLeft,
   ChevronRight,
-  Sword,
   Shield,
   Castle,
   MoveRight,
@@ -233,12 +232,12 @@ export default function ChessBasicsPage() {
 
           <p className="text-lg text-muted-foreground mb-4 max-w-3xl">
             Welcome to your chess journey! This comprehensive guide covers everything you need
-            to know to start playing chess. You'll learn how each piece moves, the special rules
+            to know to start playing chess. You&apos;ll learn how each piece moves, the special rules
             that make chess unique, and how games are won and lost.
           </p>
           <p className="text-muted-foreground max-w-3xl mb-8">
             Chess is a game of infinite depth, but the rules are straightforward. Take your time
-            with each section, and soon you'll be ready to play your first games with confidence.
+            with each section, and soon you&apos;ll be ready to play your first games with confidence.
           </p>
 
           <Button asChild size="lg">
@@ -297,7 +296,7 @@ export default function ChessBasicsPage() {
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-3xl font-bold mb-4 text-center">Special Moves</h2>
             <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-              Chess has three special moves that don't follow the normal piece movement rules.
+              Chess has three special moves that don&apos;t follow the normal piece movement rules.
               Knowing these is essential.
             </p>
 
@@ -383,7 +382,7 @@ export default function ChessBasicsPage() {
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-3xl font-bold mb-4">Ready for the Next Step?</h2>
             <p className="text-muted-foreground mb-8">
-              Now that you understand how the pieces move and the rules of the game, it's time to
+              Now that you understand how the pieces move and the rules of the game, it&apos;s time to
               learn how to start your games properly. Our Opening Principles guide teaches you the
               fundamentals that every strong player uses.
             </p>

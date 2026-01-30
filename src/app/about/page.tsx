@@ -4,7 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, ArrowLeft, Crown, Target, Heart, BookOpen, Bot, Shield, ChevronRight } from "lucide-react";
+import { Users, ArrowLeft, Crown, Target, Heart, ChevronRight } from "lucide-react";
 import { BASE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {

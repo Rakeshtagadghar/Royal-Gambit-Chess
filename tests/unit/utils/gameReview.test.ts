@@ -9,7 +9,6 @@ import {
   italianGameAnalysis,
   createMoveAnalysis,
   createGameAnalysis,
-  type MoveClassification,
 } from '@tests/fixtures/gameReview';
 
 describe('Game Review Utilities', () => {

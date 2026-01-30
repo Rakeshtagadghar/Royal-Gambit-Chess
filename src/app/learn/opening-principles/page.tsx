@@ -225,11 +225,11 @@ export default function OpeningPrinciplesPage() {
           <p className="text-lg text-muted-foreground mb-4 max-w-3xl">
             The opening sets the tone for the entire game. While there are thousands of named
             openings and millions of analyzed positions, the underlying principles remain the
-            same. Master these fundamentals, and you'll be prepared for any position.
+            same. Master these fundamentals, and you&apos;ll be prepared for any position.
           </p>
           <p className="text-muted-foreground max-w-3xl mb-8">
-            This guide focuses on understanding rather than memorization. You don't need to
-            know specific opening lines—just follow these principles, and you'll emerge from
+            This guide focuses on understanding rather than memorization. You don&apos;t need to
+            know specific opening lines—just follow these principles, and you&apos;ll emerge from
             the opening with a solid, playable position every time.
           </p>
 
@@ -246,7 +246,7 @@ export default function OpeningPrinciplesPage() {
           <div className="container mx-auto px-4 max-w-5xl">
             <h2 className="text-3xl font-bold mb-4 text-center">The Five Core Principles</h2>
             <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-              Follow these principles in every game, and you'll build strong positions naturally
+              Follow these principles in every game, and you&apos;ll build strong positions naturally
             </p>
 
             <div className="space-y-8">
@@ -351,9 +351,9 @@ export default function OpeningPrinciplesPage() {
         {/* Next Steps */}
         <section className="py-16">
           <div className="container mx-auto px-4 max-w-3xl text-center">
-            <h2 className="text-3xl font-bold mb-4">What's Next?</h2>
+            <h2 className="text-3xl font-bold mb-4">What&apos;s Next?</h2>
             <p className="text-muted-foreground mb-8">
-              With solid opening principles under your belt, it's time to learn how to finish
+              With solid opening principles under your belt, it&apos;s time to learn how to finish
               games. The endgame is where many games are won and lost—understanding basic
               endgame technique will help you convert advantages and save difficult positions.
             </p>

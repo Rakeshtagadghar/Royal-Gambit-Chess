@@ -233,7 +233,7 @@ export default function EssentialEndgamesPage() {
           </div>
 
           <p className="text-lg text-muted-foreground mb-4 max-w-3xl">
-            "In order to improve your game, you must study the endgame before everything else."
+            &quot;In order to improve your game, you must study the endgame before everything else.&quot;
             — José Raúl Capablanca, World Champion. The endgame is where games are decided—
             knowing these techniques will help you convert advantages and save difficult positions.
           </p>
@@ -408,7 +408,7 @@ export default function EssentialEndgamesPage() {
           <div className="container mx-auto px-4 max-w-3xl text-center">
             <h2 className="text-3xl font-bold mb-4">Complete Your Chess Education</h2>
             <p className="text-muted-foreground mb-8">
-              With solid endgame technique, you're ready to develop deep strategic thinking.
+              With solid endgame technique, you&apos;re ready to develop deep strategic thinking.
               Our Strategic Thinking guide teaches you how to evaluate positions, create plans,
               and understand the nuances that separate good players from great ones.
             </p>

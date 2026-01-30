@@ -35,8 +35,8 @@ jobs:
       - name: Run linter
         run: pnpm lint
 
-      - name: Run unit tests
-        run: pnpm test:unit
+      - name: Run unit tests with coverage
+        run: pnpm test:unit --coverage
 
       - name: Run contract tests
         run: pnpm test:contracts
@@ -44,9 +44,10 @@ jobs:
       - name: Run integration tests
         run: pnpm test:integration
 
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
           flags: unittests
           fail_ci_if_error: false

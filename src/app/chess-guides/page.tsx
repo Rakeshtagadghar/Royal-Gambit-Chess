@@ -180,7 +180,7 @@ export default function ChessGuidesPage() {
           </div>
 
           <p className="text-lg text-muted-foreground mb-4 max-w-3xl">
-            Welcome to our comprehensive chess guide collection. Whether you're just learning how
+            Welcome to our comprehensive chess guide collection. Whether you&apos;re just learning how
             the pieces move or looking to develop advanced strategic thinking, these guides will
             help you improve your game step by step.
           </p>
@@ -221,7 +221,7 @@ export default function ChessGuidesPage() {
                           {guide.description}
                         </CardDescription>
                         <div className="mb-4">
-                          <h4 className="font-semibold text-sm mb-2">What you'll learn:</h4>
+                          <h4 className="font-semibold text-sm mb-2">What you&apos;ll learn:</h4>
                           <ul className="grid md:grid-cols-2 gap-1">
                             {guide.topics.map((topic, index) => (
                               <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">

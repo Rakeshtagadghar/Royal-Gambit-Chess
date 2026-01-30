@@ -170,7 +170,7 @@ export default function LearnPage() {
           </div>
 
           <p className="text-lg text-muted-foreground mb-4 max-w-3xl">
-            Whether you're picking up chess for the first time or looking to sharpen your skills,
+            Whether you&apos;re picking up chess for the first time or looking to sharpen your skills,
             RoyalGambit offers structured learning tracks that take you from beginner to advanced
             player. Our interactive lessons let you practice on a real chessboard with immediate
             feedback.

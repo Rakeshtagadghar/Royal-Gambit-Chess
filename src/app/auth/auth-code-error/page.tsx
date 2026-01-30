@@ -17,7 +17,7 @@ export default function AuthCodeErrorPage() {
         </p>
         <ul className="text-sm text-muted-foreground text-left list-disc list-inside space-y-1">
           <li>The login link has expired</li>
-          <li>You've already used this login link</li>
+          <li>You&apos;ve already used this login link</li>
           <li>There was a network issue during authentication</li>
         </ul>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">

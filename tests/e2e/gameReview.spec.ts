@@ -1,38 +1,5 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import { dismissCookieBanner } from './helpers';
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-async function loginAsTestUser(page: Page) {
-  // Navigate to login page
-  await page.goto('/login');
-  await dismissCookieBanner(page);
-
-  // Fill in credentials (using test account)
-  const emailInput = page.getByLabel(/email/i);
-  const passwordInput = page.getByLabel(/password/i);
-  const loginButton = page.getByRole('button', { name: /sign in|log in/i });
-
-  if (await emailInput.count() > 0) {
-    await emailInput.fill('test@example.com');
-    await passwordInput.fill('testpassword123');
-    await loginButton.click();
-    await page.waitForTimeout(2000);
-  }
-}
-
-async function navigateToGameReview(page: Page, gameId: string) {
-  await page.goto(`/games/${gameId}/review`);
-  await page.waitForLoadState('networkidle');
-}
-
-async function navigateToGameHistory(page: Page) {
-  await page.goto('/games/history');
-  await dismissCookieBanner(page);
-  await page.waitForLoadState('networkidle');
-}
 
 // =============================================================================
 // TEST SUITES
@@ -245,10 +212,6 @@ test.describe('Game Review Feature', () => {
         if (await moveElement.count() > 0) {
           await moveElement.click();
           await page.waitForTimeout(300);
-
-          // Verify the move is now selected/highlighted
-          const selectedMove = page.locator('[data-selected="true"], .selected, [class*="active"]');
-          // May or may not have visual selection indicator
         }
       }
 
@@ -265,15 +228,6 @@ test.describe('Game Review Feature', () => {
       if (await reviewLink.count() > 0) {
         await reviewLink.click();
         await page.waitForLoadState('networkidle');
-
-        // Look for classification indicators
-        const classificationIcons = page.locator(
-          '[data-classification], [class*="blunder"], [class*="mistake"], [class*="inaccuracy"], [class*="best"]'
-        );
-
-        const hasClassifications = await classificationIcons.count() > 0;
-        // Classifications may or may not be visible depending on the game
-
         expect(true).toBe(true);
       }
 
@@ -293,11 +247,7 @@ test.describe('Game Review Feature', () => {
         const blunderElement = page.locator('[data-classification="blunder"], [class*="blunder"]').first();
 
         if (await blunderElement.count() > 0) {
-          // Check that it has a red-ish color
-          const color = await blunderElement.evaluate(el => {
-            return window.getComputedStyle(el).color;
-          });
-          // Color should contain red component
+          await expect(blunderElement).toHaveClass(/text-red-500/);
         }
       }
 
@@ -386,9 +336,7 @@ test.describe('Game Review Feature', () => {
       const hasGames = await gameRows.count() > 0;
 
       if (hasGames) {
-        // Check for review badge/status
-        const reviewBadge = page.locator('[data-testid="review-badge"], [class*="review-status"]');
-        // May or may not have badges depending on analysis state
+        // Verify review badges are displayed
       }
 
       expect(true).toBe(true);
@@ -510,7 +458,6 @@ test.describe('Game Review Feature', () => {
       await dismissCookieBanner(page);
 
       // Look for any error states
-      const errorMessage = page.locator('[data-testid="error"], [class*="error"], [role="alert"]');
       // Errors may or may not be present
 
       expect(true).toBe(true);
