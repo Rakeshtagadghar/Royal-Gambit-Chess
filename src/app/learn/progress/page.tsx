@@ -23,7 +23,7 @@ import {
   LearnAchievement,
   LearnProgressData,
 } from '@/types/learn';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { learnApi } from '@/lib/api/urls';
 import { ChevronLeft, TrendingUp, Trophy, BookOpen, Target } from 'lucide-react';
 

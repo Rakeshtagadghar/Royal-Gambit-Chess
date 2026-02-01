@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { InvitationsPanel } from '@/components/invitations/InvitationsPanel';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { Bot, Users, UserPlus, Zap, Clock, Trophy, Gamepad2 } from 'lucide-react';
 import { toast } from 'sonner';
 

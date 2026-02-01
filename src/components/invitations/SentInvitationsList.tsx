@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Copy, Loader2, PlugZap, RefreshCcw, XCircle } from 'lucide-react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { apiUrls } from '@/lib/api/urls';
 import { Badge } from '@/components/ui/badge';

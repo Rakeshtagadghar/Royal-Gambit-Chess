@@ -16,7 +16,7 @@ import {
   LessonNavigation,
 } from '@/components/learn';
 import { useLearnStore } from '@/stores/learnStore';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   LearnLesson,
   LearnTrack,

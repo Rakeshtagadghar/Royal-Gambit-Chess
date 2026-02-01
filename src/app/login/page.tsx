@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Loader2, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { executeRecaptcha, RecaptchaActions } from '@/lib/recaptcha';
@@ -25,7 +25,10 @@ function LoginContent() {
   const [username, setUsername] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [authTimedOut, setAuthTimedOut] = useState(false);
+
+  // Get error/success messages from URL params
+  const errorParam = searchParams.get('error');
+  const verified = searchParams.get('verified');
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
@@ -33,17 +36,6 @@ function LoginContent() {
       router.push(redirect);
     }
   }, [isInitialized, isAuthenticated, router, searchParams]);
-
-  // Safety timeout - if auth doesn't initialize within 5 seconds, show the form anyway
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!isInitialized) {
-        console.warn('Auth initialization timed out, showing login form');
-        setAuthTimedOut(true);
-      }
-    }, 5000);
-    return () => clearTimeout(timeout);
-  }, [isInitialized]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,8 +95,8 @@ function LoginContent() {
     setIsSubmitting(false);
   };
 
-  // Show loading while checking initial auth state (with timeout fallback)
-  if (!isInitialized && !authTimedOut) {
+  // Show loading while checking initial auth state
+  if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -151,6 +143,19 @@ function LoginContent() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Error message from URL params */}
+            {errorParam && (
+              <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive text-destructive text-sm">
+                {decodeURIComponent(errorParam)}
+              </div>
+            )}
+
+            {/* Success message for email verification */}
+            {verified && (
+              <div className="mb-4 p-3 rounded-lg bg-green-500/10 border border-green-500 text-green-600 dark:text-green-400 text-sm">
+                Email verified successfully! You can now sign in.
+              </div>
+            )}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>

@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { useGameStore } from '@/stores/gameStore';
 import { useStockfish } from '@/hooks/useStockfish';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { BOT_DIFFICULTIES, BotDifficulty, TIME_CONTROLS, TimeControl } from '@/types/chess';
 import { cn } from '@/lib/utils';
 import { Bot, Play, RotateCcw } from 'lucide-react';
