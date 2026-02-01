@@ -65,16 +65,16 @@ function AuthCallbackContent() {
         }
       }
 
-      const session = await waitForSession();
-      if (session) {
+      const hydratedSession = await waitForSession();
+      if (hydratedSession) {
         window.history.replaceState({}, document.title, window.location.pathname);
         router.push('/play');
         return;
       }
 
       // Try to get existing session (might have been set by auth listener)
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      if (existingSession) {
         router.push('/play');
         return;
       }
