@@ -16,7 +16,7 @@ import { GAME_IDS } from '@tests/fixtures/games';
  */
 
 // Skip these tests if not running against local Supabase
-const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:54321';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:55321';
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
@@ -46,9 +46,9 @@ describe.skipIf(shouldSkip)('RLS Policy Tests', () => {
 
     // Create test users and get their clients
     // Note: In real tests, you'd create actual users and get their JWT tokens
-    playerAClient = anonymousClient; // Placeholder
-    playerBClient = anonymousClient; // Placeholder
-    spectatorClient = anonymousClient; // Placeholder
+    _playerAClient = anonymousClient; // Placeholder
+    _playerBClient = anonymousClient; // Placeholder
+    _spectatorClient = anonymousClient; // Placeholder
   });
 
   afterAll(async () => {

@@ -5,7 +5,7 @@
  * Only visible in development mode.
  * 
  * Shows:
- * - 🟢 Local DB - Connected to local Supabase (http://127.0.0.1:54321)
+ * - 🟢 Local DB - Connected to local Supabase (http://127.0.0.1:55321)
  * - 🔵 Cloud DB - Connected to cloud Supabase (https://[project].supabase.co)
  */
 export function DevIndicator() {
@@ -39,7 +39,7 @@ export function DevIndicator() {
         console.log('%c DATABASE INFO', 'font-size: 16px; font-weight: bold;');
         console.log('Type:', isLocal ? '🟢 LOCAL SUPABASE' : '🔵 CLOUD SUPABASE');
         console.log('URL:', supabaseUrl);
-        console.log('Studio:', isLocal ? 'http://127.0.0.1:54323' : 'https://app.supabase.com');
+        console.log('Studio:', isLocal ? 'http://127.0.0.1:55323' : 'https://app.supabase.com');
       }}
       title={`Click to see details in console\n\nURL: ${supabaseUrl}`}
       role="status"

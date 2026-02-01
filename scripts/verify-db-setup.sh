@@ -7,7 +7,7 @@ echo "🔍 Verifying Local Supabase Database Setup..."
 echo ""
 
 # Database connection string
-DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+DB_URL="postgresql://postgres:postgres@127.0.0.1:55322/postgres"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -20,7 +20,7 @@ if ! command -v psql &> /dev/null; then
     echo -e "${YELLOW}⚠️  psql not found. Install PostgreSQL client for detailed verification.${NC}"
     echo ""
     echo "You can still verify manually:"
-    echo "1. Open Studio: http://127.0.0.1:54323"
+    echo "1. Open Studio: http://127.0.0.1:55323"
     echo "2. Check Authentication → Users (should see 3 users)"
     echo "3. Check Database → Tables (should see profiles, games, etc.)"
     echo ""
@@ -87,5 +87,5 @@ echo "  • test@example.com"
 echo "  • playerb@example.com"
 echo "  • spectator@example.com"
 echo ""
-echo "Supabase Studio: http://127.0.0.1:54323"
+echo "Supabase Studio: http://127.0.0.1:55323"
 echo "══════════════════════════════════════════════════════════════"

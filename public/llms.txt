@@ -1,0 +1,229 @@
+# RoyalGambit Chess
+
+> A modern, open-source chess learning and playing platform built with Next.js, Tauri, and Supabase.
+
+Production URL: https://royal-gambit-chess.vercel.app
+
+## Project Overview
+
+RoyalGambit is a full-stack chess platform providing:
+- Interactive lessons and tutorials for all skill levels
+- Multiplayer chess gameplay (PvP and vs Bot)
+- Game analysis and replay with Stockfish engine
+- ELO-based rating system and leaderboards
+- Desktop apps for Windows, macOS, and Linux
+
+## Tech Stack
+
+### Frontend
+- Framework: Next.js 16+ (App Router, TypeScript)
+- UI: React 19, TailwindCSS 4, shadcn/ui, Radix UI
+- Animation: Framer Motion
+- Chess Board: react-chessboard + chess.js
+- State: Zustand (client), TanStack React Query (server)
+
+### Backend
+- Backend as a Service: Supabase (Auth, PostgreSQL, Realtime, Storage)
+- API: Next.js API Routes (server-side)
+- Chess Engine: Stockfish.js (WASM, runs in WebWorker)
+
+### Desktop App
+- Framework: Tauri 2.x (Rust-based native wrapper)
+- Targets: Windows (MSI), macOS (DMG, arm64/x64), Linux (AppImage, DEB)
+
+### Testing
+- Unit/Integration: Vitest
+- E2E: Playwright with axe-core accessibility testing
+- Security: RLS policy validation tests
+
+### Deployment
+- Web: Vercel
+- Desktop: GitHub Releases via GitHub Actions
+
+## Project Structure
+
+```
+chess/
+├── src/
+│   ├── app/                      # Next.js App Router pages
+│   │   ├── api/                  # API routes
+│   │   │   ├── games/           # Game CRUD, moves, join
+│   │   │   ├── learn/           # Learning system API
+│   │   │   ├── matchmaking/     # Queue management
+│   │   │   ├── ratings/         # ELO calculations
+│   │   │   ├── leaderboard/     # Rankings
+│   │   │   ├── invitations/     # Game invites
+│   │   │   ├── game-review/     # Analysis queue
+│   │   │   └── rtc/             # WebRTC signaling
+│   │   ├── game/[id]/           # Live game room
+│   │   ├── game/[id]/review/    # Game analysis view
+│   │   ├── play/                # Game mode selection
+│   │   ├── bot/                 # Play vs Stockfish
+│   │   ├── learn/               # Learning hub & lessons
+│   │   ├── leaderboard/         # ELO rankings
+│   │   ├── profile/[username]/  # User profiles
+│   │   ├── archive/             # Game history
+│   │   └── settings/            # User settings
+│   ├── components/
+│   │   ├── chess/               # ChessBoard, Clock, MoveList, etc.
+│   │   ├── review/              # EvaluationBar, AccuracyChart
+│   │   ├── learn/               # LessonBoard, QuizCard, TrackCard
+│   │   ├── layout/              # Navbar, Footer
+│   │   ├── ui/                  # shadcn/ui components
+│   │   └── providers/           # React context providers
+│   ├── hooks/                   # useAuth, useGameReview, useStockfish
+│   ├── lib/
+│   │   ├── supabase/            # Client, server, middleware, admin
+│   │   ├── stockfish/           # Chess engine integration
+│   │   ├── api/                 # API utilities
+│   │   └── config.ts            # Site configuration
+│   ├── stores/                  # Zustand: gameStore, authStore, learnStore
+│   └── types/                   # TypeScript type definitions
+├── supabase/
+│   ├── migrations/              # Database migrations
+│   └── seed.sql                 # Initial data
+├── src-tauri/                   # Desktop app (Rust/Tauri)
+├── tests/
+│   ├── unit/                    # Unit tests
+│   ├── integration/             # Integration tests
+│   ├── e2e/                     # Playwright E2E tests
+│   └── security/                # RLS security tests
+├── requirements/                # Feature specifications (JSON)
+└── public/                      # Static assets
+```
+
+## Key Features
+
+### Game Modes
+- Play vs Bot: Stockfish AI with 5 difficulty levels
+- Play vs Friend: PvP with shareable game codes
+- Matchmaking: Automatic opponent pairing with queue system
+- Spectating: Watch ongoing games in real-time
+
+### Time Controls
+- Bullet: 1+0, 2+1
+- Blitz: 3+0, 3+2, 5+0, 5+3
+- Rapid: 10+0, 10+5, 15+10
+- Classical: 30+0
+
+### Learning System
+- Learning Tracks: Chess Basics, Opening Principles, Essential Endgames, Strategic Thinking
+- Interactive Lessons: Step-by-step guidance with board interaction
+- Step Types: explain, move_task, quiz, puzzle
+- Progress Tracking: Completion status, streaks, achievements
+
+### Game Analysis
+- Move Classification: best, good, inaccuracy, mistake, blunder
+- Accuracy Metrics: ACPL (Average Centipawn Loss)
+- Evaluation Bar: Visual position assessment
+- Move Timeline: Navigate through game with analysis
+
+### User System
+- Authentication: Supabase Auth (email/password)
+- Profiles: Username, avatar, bio, country, privacy settings
+- ELO Ratings: Per time control with history tracking
+- Leaderboards: Global rankings by rating
+
+## Database Schema (Key Tables)
+
+- **profiles**: User profiles (username, display_name, avatar_url, bio, country_code)
+- **games**: Game records (mode, players, fen, pgn, status, result, time_control)
+- **moves**: Individual moves (game_id, ply, uci, san, fen_after)
+- **ratings**: ELO per user per time control (elo, games_played, wins/losses/draws)
+- **rating_history**: Append-only audit trail for ELO changes
+- **matchmaking_queue**: Real-time matchmaking (user_id, time_control)
+- **invitations**: Friend game invites (from_user_id, to_user_id, status)
+- **learn_tracks**: Learning tracks (slug, title, level, description)
+- **learn_lessons**: Lessons within tracks (slug, title, topic, steps)
+- **learn_steps**: Lesson steps (type, content, fen, move tasks)
+- **learn_progress**: User lesson completion tracking
+
+## API Endpoints
+
+### Games
+- POST /api/games/create - Create new game
+- GET /api/games/get - Fetch game details
+- POST /api/games/join - Join waiting game
+- POST /api/games/move - Submit move (server-validated)
+- POST /api/games/[id]/finish - Finalize game
+- POST /api/games/[id]/resign - Player resignation
+
+### Learning
+- GET /api/learn/tracks - All learning tracks
+- GET /api/learn/lessons/[slug] - Lesson content
+- POST /api/learn/progress/lesson - Record lesson completion
+- GET /api/learn/recommended - Suggested content
+
+### Social
+- POST /api/matchmaking/enqueue - Join matchmaking queue
+- GET /api/leaderboard - ELO rankings
+- GET /api/invitations - Received invitations
+
+### Analysis
+- POST /api/game-review/queue - Submit for analysis
+- GET /api/game-review/status/[id] - Analysis progress
+
+## Key Patterns
+
+### Move Validation Flow
+1. Client sends UCI move to /api/games/move
+2. Server reconstructs game from initial_fen + moves table
+3. Server validates move legality using chess.js
+4. If valid: insert move, update current_fen, broadcast realtime event
+5. Client updates local state from response
+
+### Real-time Synchronization
+- Supabase Realtime subscriptions on games, moves, matchmaking_queue, invitations tables
+- Presence tracking for online status
+- Optimistic UI updates with server reconciliation
+
+### Security
+- Row-Level Security (RLS) on all tables
+- Server-side move validation (anti-cheat)
+- JWT authentication via Supabase
+- No service role keys in client bundles
+
+## Development
+
+### Prerequisites
+- Node.js 20+
+- pnpm
+- Supabase CLI (for local development)
+- Rust (for desktop builds)
+
+### Environment Variables
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY (server-only)
+- NEXT_PUBLIC_SITE_URL
+
+### Commands
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm test` - Run unit tests
+- `pnpm test:e2e` - Run E2E tests
+- `pnpm tauri dev` - Start desktop development
+- `pnpm tauri build` - Build desktop app
+
+## Requirements Documentation
+
+Detailed feature specifications are in the `/requirements` folder:
+- requirements.json - Core platform specification
+- learning.json - Learning system expansion
+- game-review.json - Game analysis system
+- desktop-app.json - Desktop application requirements
+- seo.json - SEO and content requirements
+- testing-requirements.json - Testing specifications
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make changes following existing code patterns
+4. Add tests for new functionality
+5. Run `pnpm lint` and `pnpm test`
+6. Submit a pull request
+
+## License
+
+Open source - see LICENSE file for details.

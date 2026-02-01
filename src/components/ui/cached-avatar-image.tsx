@@ -34,6 +34,9 @@ export function CachedAvatarImage({ src, ...props }: CachedAvatarImageProps) {
     let isMounted = true;
 
     async function loadImage() {
+      // src is guaranteed to be defined here due to early return above
+      if (!src) return;
+      
       try {
         const url = await getCachedImageUrl(src);
         if (isMounted) {
