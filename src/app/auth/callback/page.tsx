@@ -38,6 +38,11 @@ function AuthCallbackContent() {
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
 
+        if (accessToken && !refreshToken) {
+          setError('OAuth response missing refresh token. Please sign in again.');
+          return;
+        }
+
         if (accessToken && refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,

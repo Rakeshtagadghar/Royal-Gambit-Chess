@@ -9,6 +9,7 @@ export function createClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      flowType: 'pkce',
     },
   });
 }
@@ -22,4 +23,3 @@ export function getSupabaseClient() {
   }
   return browserClient;
 }
-
