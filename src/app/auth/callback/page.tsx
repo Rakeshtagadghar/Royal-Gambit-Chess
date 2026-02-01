@@ -21,40 +21,16 @@ function AuthCallbackContent() {
         return;
       }
 
-      // Check for hash fragment (implicit flow)
-      const hash = window.location.hash;
-      if (hash && hash.includes('access_token')) {
-        // Parse hash parameters
-        const hashParams = new URLSearchParams(hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-        
-        if (accessToken) {
-          // Set the session manually
-          const { error: sessionError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || '',
-          });
-          
-          if (sessionError) {
-            setError(sessionError.message);
-            return;
-          }
-          
-          router.push('/play');
-          return;
-        }
+      const { data: callbackData, error: callbackError } =
+        await supabase.auth.getSessionFromUrl({ storeSession: true });
+
+      if (callbackError) {
+        setError(callbackError.message);
+        return;
       }
 
-      // Check for code (PKCE flow) - let the route.ts handle it
-      const code = searchParams.get('code');
-      if (code) {
-        // The route.ts should have handled this, but as fallback:
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError) {
-          setError(exchangeError.message);
-          return;
-        }
+      if (callbackData?.session) {
+        window.history.replaceState({}, document.title, window.location.pathname);
         router.push('/play');
         return;
       }
