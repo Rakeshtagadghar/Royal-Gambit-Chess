@@ -21,15 +21,47 @@ function AuthCallbackContent() {
         return;
       }
 
-      const { data: callbackData, error: callbackError } =
-        await supabase.auth.getSessionFromUrl({ storeSession: true });
+      const waitForSession = async () => {
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            return session;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+        return null;
+      };
 
-      if (callbackError) {
-        setError(callbackError.message);
-        return;
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (accessToken && refreshToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+
+          if (sessionError) {
+            setError(sessionError.message);
+            return;
+          }
+        }
       }
 
-      if (callbackData?.session) {
+      const code = searchParams.get('code');
+      if (code) {
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) {
+          setError(exchangeError.message);
+          return;
+        }
+      }
+
+      const session = await waitForSession();
+      if (session) {
         window.history.replaceState({}, document.title, window.location.pathname);
         router.push('/play');
         return;
