@@ -209,6 +209,15 @@ export function useAuth() {
       });
 
       if (error) throw error;
+      if (data.user) {
+        setUser(data.user);
+        const profileData = await loadOrCreateProfile(supabase, data.user);
+        if (profileData) {
+          setProfile(mapDbProfileToProfile(profileData));
+        } else {
+          setProfile(null);
+        }
+      }
       return { data, error: null };
     } catch (error) {
       return { data: null, error: error as Error };
@@ -328,4 +337,3 @@ export function useAuth() {
     setProfile,
   };
 }
-
