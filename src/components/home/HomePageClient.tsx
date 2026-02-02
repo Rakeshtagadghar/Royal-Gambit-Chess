@@ -597,6 +597,250 @@ function LiveActivityPulse() {
   );
 }
 
+// Custom cursor follower for landing page
+function CustomCursor() {
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHovering, setIsHovering] = useState(false);
+  const [isClicking, setIsClicking] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+      setIsVisible(true);
+    };
+
+    const handleMouseEnter = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('a, button, [role="button"]')) {
+        setIsHovering(true);
+      }
+    };
+
+    const handleMouseLeave = () => {
+      setIsHovering(false);
+    };
+
+    const handleMouseDown = () => setIsClicking(true);
+    const handleMouseUp = () => setIsClicking(false);
+    const handleMouseOut = () => setIsVisible(false);
+
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseover', handleMouseEnter);
+    document.addEventListener('mouseout', handleMouseLeave);
+    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mouseout', handleMouseOut);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseover', handleMouseEnter);
+      document.removeEventListener('mouseout', handleMouseLeave);
+      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mouseout', handleMouseOut);
+    };
+  }, []);
+
+  // Only show on desktop
+  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    return null;
+  }
+
+  return (
+    <>
+      {/* Main cursor dot */}
+      <motion.div
+        className="fixed top-0 left-0 w-3 h-3 bg-primary rounded-full pointer-events-none z-[9999] mix-blend-difference hidden lg:block"
+        animate={{
+          x: mousePos.x - 6,
+          y: mousePos.y - 6,
+          scale: isClicking ? 0.8 : 1,
+          opacity: isVisible ? 1 : 0,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 500,
+          damping: 28,
+          mass: 0.5,
+        }}
+      />
+      
+      {/* Outer ring */}
+      <motion.div
+        className="fixed top-0 left-0 w-10 h-10 border-2 border-primary/50 rounded-full pointer-events-none z-[9998] hidden lg:block"
+        animate={{
+          x: mousePos.x - 20,
+          y: mousePos.y - 20,
+          scale: isHovering ? 1.5 : isClicking ? 0.9 : 1,
+          opacity: isVisible ? 0.6 : 0,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 150,
+          damping: 15,
+          mass: 0.8,
+        }}
+      />
+
+      {/* Chess piece that follows cursor on hover */}
+      <motion.div
+        className="fixed top-0 left-0 pointer-events-none z-[9997] hidden lg:block"
+        animate={{
+          x: mousePos.x + 15,
+          y: mousePos.y + 15,
+          opacity: isHovering && isVisible ? 1 : 0,
+          scale: isHovering ? 1 : 0.5,
+          rotate: isHovering ? 0 : -45,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 200,
+          damping: 20,
+        }}
+      >
+        <ChessPiece type="knight" className="w-6 h-6 text-primary/70" />
+      </motion.div>
+    </>
+  );
+}
+
+// Animated grid background
+function AnimatedGridBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-foreground/[0.04]" />
+          </pattern>
+          <linearGradient id="grid-fade" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="white" stopOpacity="0" />
+            <stop offset="20%" stopColor="white" stopOpacity="1" />
+            <stop offset="80%" stopColor="white" stopOpacity="1" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </linearGradient>
+          <mask id="grid-mask">
+            <rect width="100%" height="100%" fill="url(#grid-fade)" />
+          </mask>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" mask="url(#grid-mask)" />
+      </svg>
+      
+      {/* Animated scan line */}
+      <motion.div
+        className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"
+        initial={{ top: "0%" }}
+        animate={{ top: "100%" }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+      />
+    </div>
+  );
+}
+
+// Floating particles
+function FloatingParticles() {
+  const particles = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 4 + 2,
+    duration: Math.random() * 10 + 15,
+    delay: Math.random() * 5,
+  }));
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((particle) => (
+        <motion.div
+          key={particle.id}
+          className="absolute rounded-full bg-primary/20"
+          style={{
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+            width: particle.size,
+            height: particle.size,
+          }}
+          animate={{
+            y: [0, -100, 0],
+            x: [0, Math.random() * 50 - 25, 0],
+            opacity: [0, 0.6, 0],
+            scale: [0.5, 1, 0.5],
+          }}
+          transition={{
+            duration: particle.duration,
+            delay: particle.delay,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Morphing gradient blob
+function MorphingBlob({ className, color }: { className?: string; color: string }) {
+  return (
+    <motion.div
+      className={`absolute rounded-full blur-3xl ${color} ${className}`}
+      animate={{
+        borderRadius: [
+          "60% 40% 30% 70% / 60% 30% 70% 40%",
+          "30% 60% 70% 40% / 50% 60% 30% 60%",
+          "60% 40% 30% 70% / 60% 30% 70% 40%",
+        ],
+        scale: [1, 1.1, 1],
+      }}
+      transition={{
+        duration: 8,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    />
+  );
+}
+
+// Glowing orb with mouse interaction
+function InteractiveGlowOrb() {
+  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({
+        x: e.clientX / window.innerWidth,
+        y: e.clientY / window.innerHeight,
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  return (
+    <motion.div
+      className="absolute w-[600px] h-[600px] rounded-full pointer-events-none"
+      style={{
+        background: `radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%)`,
+        filter: "blur(60px)",
+      }}
+      animate={{
+        x: `calc(${mousePos.x * 100}% - 300px)`,
+        y: `calc(${mousePos.y * 100}% - 300px)`,
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 50,
+        damping: 30,
+      }}
+    />
+  );
+}
+
 export function HomePageClient() {
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -610,11 +854,23 @@ export function HomePageClient() {
   const imageParallax = useTransform(scrollYProgress, [0, 1], [0, 100]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background cursor-none lg:cursor-none">
+      {/* Custom cursor - only on desktop */}
+      <CustomCursor />
+      
       <Navbar />
       
       {/* Hero Section */}
       <section ref={heroRef} className="relative flex-1 flex items-center justify-center overflow-hidden min-h-[100vh]">
+        {/* Animated grid background */}
+        <AnimatedGridBackground />
+
+        {/* Interactive glow that follows mouse */}
+        <InteractiveGlowOrb />
+
+        {/* Floating particles */}
+        <FloatingParticles />
+
         {/* Background Image Layer */}
         <motion.div 
           className="absolute inset-0 z-0"
@@ -624,37 +880,45 @@ export function HomePageClient() {
             src="/images/chess-hero.jpg"
             alt=""
             fill
-            className="object-cover opacity-[0.08]"
+            className="object-cover opacity-[0.06]"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/95 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background" />
         </motion.div>
 
         {/* Chess board pattern overlay */}
-        <ChessBoardPattern className="opacity-50" />
+        <ChessBoardPattern className="opacity-30" />
 
         {/* Floating chess pieces */}
         <FloatingPieces />
 
-        {/* Animated gradient orbs */}
-        <div className="absolute inset-0 overflow-hidden">
-          <motion.div 
-            className="absolute top-20 left-10 w-72 h-72 bg-primary/8 rounded-full blur-3xl"
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.5, 0.8, 0.5],
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        {/* Morphing gradient blobs */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <MorphingBlob 
+            className="top-10 left-10 w-80 h-80" 
+            color="bg-primary/10" 
           />
-          <motion.div 
-            className="absolute bottom-20 right-10 w-96 h-96 bg-accent/8 rounded-full blur-3xl"
-            animate={{ 
-              scale: [1.2, 1, 1.2],
-              opacity: [0.6, 0.4, 0.6],
-            }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+          <MorphingBlob 
+            className="bottom-20 right-10 w-96 h-96" 
+            color="bg-accent/8" 
           />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-gradient-to-br from-primary/5 to-accent/5 rounded-full blur-3xl" />
+          <MorphingBlob 
+            className="top-1/3 right-1/4 w-64 h-64" 
+            color="bg-emerald-500/5" 
+          />
+          
+          {/* Center radial gradient */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px]">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 rounded-full blur-3xl" />
+          </div>
+
+          {/* Subtle noise texture overlay */}
+          <div 
+            className="absolute inset-0 opacity-[0.015]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+            }}
+          />
         </div>
 
         <motion.div 
