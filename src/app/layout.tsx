@@ -91,7 +91,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="light">
       <head>
         <script
           dangerouslySetInnerHTML={{ __html: CONSENT_MODE_SCRIPT }}

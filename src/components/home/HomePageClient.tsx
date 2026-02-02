@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,8 +23,10 @@ import {
   BookOpen,
   Target,
   CheckCircle,
+  Sparkles,
 } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
+import { useRef } from 'react';
 
 const playFeatures = [
   {
@@ -85,33 +87,41 @@ const learningTracks = [
     level: 'Beginner',
     title: 'Chess Basics',
     description: 'Learn piece movement, rules, and fundamental concepts',
-    color: 'from-green-500 to-emerald-600',
+    color: 'from-emerald-500 to-teal-500',
+    bgColor: 'bg-emerald-50',
+    textColor: 'text-emerald-700',
   },
   {
     level: 'Intermediate',
     title: 'Tactics & Patterns',
     description: 'Master forks, pins, skewers, and common tactical motifs',
-    color: 'from-blue-500 to-cyan-600',
+    color: 'from-sky-500 to-blue-500',
+    bgColor: 'bg-sky-50',
+    textColor: 'text-sky-700',
   },
   {
     level: 'Advanced',
     title: 'Strategy & Planning',
     description: 'Develop positional understanding and long-term planning',
-    color: 'from-purple-500 to-violet-600',
+    color: 'from-amber-500 to-orange-500',
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-700',
   },
   {
     level: 'Expert',
     title: 'Master Techniques',
     description: 'Advanced endgames, complex calculations, and deep analysis',
-    color: 'from-orange-500 to-red-600',
+    color: 'from-rose-500 to-red-500',
+    bgColor: 'bg-rose-50',
+    textColor: 'text-rose-700',
   },
 ];
 
 const sampleAchievements = [
-  { icon: '🎯', title: 'First Steps', description: 'Complete your first lesson' },
-  { icon: '🔥', title: 'On Fire', description: 'Maintain a 7-day streak' },
-  { icon: '🧩', title: 'Puzzle Master', description: 'Solve 100 puzzles' },
-  { icon: '👑', title: 'Track Champion', description: 'Complete an entire track' },
+  { icon: Target, title: 'First Steps', description: 'Complete your first lesson', color: 'text-emerald-500' },
+  { icon: Zap, title: 'On Fire', description: 'Maintain a 7-day streak', color: 'text-orange-500' },
+  { icon: Puzzle, title: 'Puzzle Master', description: 'Solve 100 puzzles', color: 'text-sky-500' },
+  { icon: Crown, title: 'Track Champion', description: 'Complete an entire track', color: 'text-amber-500' },
 ];
 
 const chessGuides = [
@@ -121,7 +131,7 @@ const chessGuides = [
     href: '/learn/chess-basics',
     icon: Crown,
     level: 'Beginner',
-    levelColor: 'bg-green-500',
+    levelColor: 'bg-emerald-500',
   },
   {
     title: 'Opening Principles',
@@ -129,7 +139,7 @@ const chessGuides = [
     href: '/learn/opening-principles',
     icon: Swords,
     level: 'Intermediate',
-    levelColor: 'bg-blue-500',
+    levelColor: 'bg-sky-500',
   },
   {
     title: 'Essential Endgames',
@@ -137,7 +147,7 @@ const chessGuides = [
     href: '/learn/essential-endgames',
     icon: Flag,
     level: 'Intermediate',
-    levelColor: 'bg-blue-500',
+    levelColor: 'bg-sky-500',
   },
   {
     title: 'Strategic Thinking',
@@ -145,7 +155,7 @@ const chessGuides = [
     href: '/learn/strategic-thinking',
     icon: Brain,
     level: 'Advanced',
-    levelColor: 'bg-purple-500',
+    levelColor: 'bg-amber-500',
   },
 ];
 
@@ -187,42 +197,106 @@ const whyRoyalGambit = [
   },
 ];
 
+// Staggered animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: { 
+    opacity: 0, 
+    y: 40,
+    scale: 0.95,
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 15,
+      mass: 1,
+    },
+  },
+};
+
+const fadeUpVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  },
+};
+
 export function HomePageClient() {
+  const heroRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
+  
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
+  const heroY = useTransform(scrollYProgress, [0, 0.5], [0, 50]);
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative flex-1 flex items-center justify-center overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `
-              linear-gradient(30deg, var(--board-dark) 12%, transparent 12.5%, transparent 87%, var(--board-dark) 87.5%, var(--board-dark)),
-              linear-gradient(150deg, var(--board-dark) 12%, transparent 12.5%, transparent 87%, var(--board-dark) 87.5%, var(--board-dark)),
-              linear-gradient(30deg, var(--board-dark) 12%, transparent 12.5%, transparent 87%, var(--board-dark) 87.5%, var(--board-dark)),
-              linear-gradient(150deg, var(--board-dark) 12%, transparent 12.5%, transparent 87%, var(--board-dark) 87.5%, var(--board-dark)),
-              linear-gradient(60deg, var(--board-light) 25%, transparent 25.5%, transparent 75%, var(--board-light) 75%, var(--board-light)),
-              linear-gradient(60deg, var(--board-light) 25%, transparent 25.5%, transparent 75%, var(--board-light) 75%, var(--board-light))
-            `,
-            backgroundSize: '80px 140px',
-            backgroundPosition: '0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px'
-          }} />
+      <section ref={heroRef} className="relative flex-1 flex items-center justify-center overflow-hidden min-h-[90vh]">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-20 left-10 w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-primary/3 to-accent/3 rounded-full blur-3xl" />
         </div>
 
-        <div className="container mx-auto px-4 py-20 relative z-10">
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: `linear-gradient(to right, currentColor 1px, transparent 1px),
+                           linear-gradient(to bottom, currentColor 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }} />
+
+        <motion.div 
+          style={{ opacity: heroOpacity, scale: heroScale, y: heroY }}
+          className="container mx-auto px-4 py-20 relative z-10"
+        >
           <div className="max-w-4xl mx-auto text-center">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             >
-              <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                RoyalGambit
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 border border-primary/20"
+              >
+                <Sparkles className="w-4 h-4" />
+                Free to play and learn
+              </motion.div>
+              
+              <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight">
+                <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground bg-clip-text">Royal</span>
+                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Gambit</span>
               </h1>
-              <p className="text-xl md:text-2xl text-muted-foreground mb-8">
+              <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed text-balance">
                 Play, Learn, and Master Chess.
-                <br />
                 Interactive lessons, tactical puzzles, and competitive play.
               </p>
             </motion.div>
@@ -230,16 +304,16 @@ export function HomePageClient() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Button asChild size="lg" className="text-lg px-8">
+              <Button asChild size="lg" className="text-lg px-8 h-14 rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300">
                 <Link href="/play">
                   Play Now
                   <ChevronRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg px-8">
+              <Button asChild variant="outline" size="lg" className="text-lg px-8 h-14 rounded-xl border-2 hover:bg-secondary transition-all duration-300">
                 <Link href="/login">
                   Sign In
                 </Link>
@@ -248,21 +322,26 @@ export function HomePageClient() {
 
             {/* Animated chess pieces */}
             <motion.div
-              className="mt-16 flex justify-center gap-4 text-6xl md:text-8xl opacity-20"
+              className="mt-20 flex justify-center gap-3 md:gap-6 text-5xl md:text-7xl"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.2 }}
-              transition={{ duration: 1, delay: 0.5 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 0.6 }}
             >
               {['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'].map((piece, i) => (
                 <motion.span
                   key={i}
-                  initial={{ y: 20 }}
-                  animate={{ y: [0, -10, 0] }}
+                  className="text-foreground/10 hover:text-primary/30 transition-colors duration-300 cursor-default"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
                   transition={{
-                    duration: 2,
-                    delay: i * 0.1,
-                    repeat: Infinity,
-                    repeatType: 'reverse',
+                    duration: 0.5,
+                    delay: 0.7 + i * 0.08,
+                    ease: "easeOut",
+                  }}
+                  whileHover={{ 
+                    y: -8, 
+                    scale: 1.1,
+                    transition: { duration: 0.2 }
                   }}
                 >
                   {piece}
@@ -270,110 +349,164 @@ export function HomePageClient() {
               ))}
             </motion.div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Scroll indicator */}
+        <motion.div 
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2, duration: 0.5 }}
+        >
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="w-6 h-10 rounded-full border-2 border-muted-foreground/30 flex items-start justify-center p-2"
+          >
+            <motion.div className="w-1.5 h-2.5 bg-muted-foreground/50 rounded-full" />
+          </motion.div>
+        </motion.div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-24 bg-secondary/50">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUpVariants}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
               Everything You Need to Play
             </h2>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               A complete chess experience, completely free.
             </p>
           </motion.div>
 
           {/* Play Features */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4 text-center text-muted-foreground">Play</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {playFeatures.map((feature, index) => (
+          <div className="mb-16">
+            <motion.h3 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="text-sm font-semibold mb-6 text-center text-primary uppercase tracking-wider"
+            >
+              Play
+            </motion.h3>
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-3 gap-6"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={containerVariants}
+            >
+              {playFeatures.map((feature) => (
                 <motion.div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
+                  variants={cardVariants}
                 >
-                  <Card className="h-full hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                      <feature.icon className="h-10 w-10 text-primary mb-2" />
-                      <CardTitle>{feature.title}</CardTitle>
-                      <CardDescription>{feature.description}</CardDescription>
+                  <Card className="h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 bg-card/80 backdrop-blur-sm group">
+                    <CardHeader className="space-y-4">
+                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+                        <feature.icon className="h-7 w-7 text-primary" />
+                      </div>
+                      <CardTitle className="text-xl">{feature.title}</CardTitle>
+                      <CardDescription className="text-base">{feature.description}</CardDescription>
                     </CardHeader>
                   </Card>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
 
           {/* Learn Features */}
-          <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-4 text-center text-muted-foreground">Learn & Improve</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {learnFeatures.map((feature, index) => (
+          <div className="mb-16">
+            <motion.h3 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="text-sm font-semibold mb-6 text-center text-accent uppercase tracking-wider"
+            >
+              Learn & Improve
+            </motion.h3>
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-3 gap-6"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={containerVariants}
+            >
+              {learnFeatures.map((feature) => (
                 <motion.div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
+                  variants={cardVariants}
                 >
-                  <Card className="h-full hover:border-accent/50 transition-colors border-accent/20">
-                    <CardHeader>
-                      <feature.icon className="h-10 w-10 text-accent mb-2" />
-                      <CardTitle>{feature.title}</CardTitle>
-                      <CardDescription>{feature.description}</CardDescription>
+                  <Card className="h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-accent/10 transition-all duration-500 bg-card/80 backdrop-blur-sm group">
+                    <CardHeader className="space-y-4">
+                      <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 group-hover:scale-110 transition-all duration-300">
+                        <feature.icon className="h-7 w-7 text-accent" />
+                      </div>
+                      <CardTitle className="text-xl">{feature.title}</CardTitle>
+                      <CardDescription className="text-base">{feature.description}</CardDescription>
                     </CardHeader>
                   </Card>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
 
           {/* Platform Features */}
           <div>
-            <h3 className="text-xl font-semibold mb-4 text-center text-muted-foreground">Platform</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {platformFeatures.map((feature, index) => (
+            <motion.h3 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="text-sm font-semibold mb-6 text-center text-muted-foreground uppercase tracking-wider"
+            >
+              Platform
+            </motion.h3>
+            <motion.div 
+              className="grid grid-cols-1 md:grid-cols-3 gap-6"
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: "-50px" }}
+              variants={containerVariants}
+            >
+              {platformFeatures.map((feature) => (
                 <motion.div
                   key={feature.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
+                  variants={cardVariants}
                 >
-                  <Card className="h-full hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                      <feature.icon className="h-10 w-10 text-muted-foreground mb-2" />
-                      <CardTitle>{feature.title}</CardTitle>
-                      <CardDescription>{feature.description}</CardDescription>
+                  <Card className="h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-500 bg-card/80 backdrop-blur-sm group">
+                    <CardHeader className="space-y-4">
+                      <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-muted/80 group-hover:scale-110 transition-all duration-300">
+                        <feature.icon className="h-7 w-7 text-muted-foreground" />
+                      </div>
+                      <CardTitle className="text-xl">{feature.title}</CardTitle>
+                      <CardDescription className="text-base">{feature.description}</CardDescription>
                     </CardHeader>
                   </Card>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
 
       {/* Learning Tracks Preview Section */}
-      <section className="py-20">
+      <section className="py-24">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUpVariants}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
               Structured Learning Paths
             </h2>
             <p className="text-muted-foreground text-lg">
@@ -381,43 +514,47 @@ export function HomePageClient() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {learningTracks.map((track, index) => (
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={containerVariants}
+          >
+            {learningTracks.map((track) => (
               <motion.div
                 key={track.level}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                variants={cardVariants}
               >
-                <Card className="h-full overflow-hidden">
-                  <div className={`h-2 bg-gradient-to-r ${track.color}`} />
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full bg-gradient-to-r ${track.color} text-white`}>
+                <Card className="h-full overflow-hidden border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-500 group">
+                  <div className={`h-1.5 bg-gradient-to-r ${track.color}`} />
+                  <CardHeader className="pt-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full bg-gradient-to-r ${track.color} text-white shadow-sm`}>
                         {track.level}
                       </span>
                     </div>
-                    <CardTitle className="text-lg">{track.title}</CardTitle>
-                    <CardDescription>{track.description}</CardDescription>
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors">{track.title}</CardTitle>
+                    <CardDescription className="text-sm">{track.description}</CardDescription>
                   </CardHeader>
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Achievements Preview Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-24 bg-secondary/50">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUpVariants}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
               Earn Achievements
             </h2>
             <p className="text-muted-foreground text-lg">
@@ -425,38 +562,44 @@ export function HomePageClient() {
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-            {sampleAchievements.map((achievement, index) => (
+          <motion.div 
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={containerVariants}
+          >
+            {sampleAchievements.map((achievement) => (
               <motion.div
                 key={achievement.title}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                variants={cardVariants}
               >
-                <Card className="h-full text-center hover:border-accent/50 transition-colors">
-                  <CardContent className="pt-6">
-                    <div className="text-4xl mb-3">{achievement.icon}</div>
+                <Card className="h-full text-center border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-500 group">
+                  <CardContent className="pt-8 pb-6">
+                    <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                      <achievement.icon className={`w-8 h-8 ${achievement.color}`} />
+                    </div>
                     <h3 className="font-semibold text-sm mb-1">{achievement.title}</h3>
                     <p className="text-xs text-muted-foreground">{achievement.description}</p>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Learn Chess Online Section - SEO Content */}
-      <section className="py-20">
+      <section className="py-24">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUpVariants}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
               Learn Chess Online — Step by Step
             </h2>
             <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
@@ -466,74 +609,77 @@ export function HomePageClient() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-6 mb-8">
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
+          <motion.div 
+            className="grid md:grid-cols-2 gap-8 mb-12 max-w-4xl mx-auto"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={containerVariants}
+          >
+            {[
+              {
+                title: 'Beginner-Friendly Chess Basics',
+                description: 'Start from zero with our comprehensive guide to piece movement, special rules, and fundamental checkmate patterns.',
+              },
+              {
+                title: 'Interactive Lessons and Practice',
+                description: 'Learn by doing with our interactive lessons where you make moves on a real chessboard and get immediate feedback.',
+              },
+              {
+                title: 'Openings, Endgames, and Strategy Tracks',
+                description: 'Progress through structured learning tracks covering opening principles, essential endgames, and advanced strategic concepts.',
+              },
+              {
+                title: 'Play vs AI or Friends',
+                description: 'Apply what you learn by playing games against our adjustable-strength AI or challenge friends to real-time matches.',
+              },
+            ].map((item) => (
+              <motion.div
+                key={item.title}
+                variants={cardVariants}
+                className="flex items-start gap-4 p-6 rounded-2xl bg-card shadow-lg shadow-black/5"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <h3 className="font-semibold">Beginner-Friendly Chess Basics</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Start from zero with our comprehensive guide to piece movement, special rules,
-                    and fundamental checkmate patterns.
+                  <h3 className="font-semibold mb-1">{item.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {item.description}
                   </p>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold">Interactive Lessons and Practice</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Learn by doing with our interactive lessons where you make moves on a real
-                    chessboard and get immediate feedback.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold">Openings, Endgames, and Strategy Tracks</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Progress through structured learning tracks covering opening principles,
-                    essential endgames, and advanced strategic concepts.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <CheckCircle className="h-6 w-6 text-green-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold">Play vs AI or Friends</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Apply what you learn by playing games against our adjustable-strength AI
-                    or challenge friends to real-time matches.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+              </motion.div>
+            ))}
+          </motion.div>
 
-          <div className="text-center">
-            <Button asChild size="lg" variant="outline">
+          <motion.div 
+            className="text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+          >
+            <Button asChild size="lg" variant="outline" className="rounded-xl h-12 px-8">
               <Link href="/how-it-works">
-                Learn How It Works
+                How It Works
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* What You Can Learn Section - Links to Guide Pages */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-24 bg-secondary/50">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUpVariants}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
               What You Can Learn
             </h2>
             <p className="text-muted-foreground text-lg">
@@ -541,54 +687,66 @@ export function HomePageClient() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {chessGuides.map((guide, index) => (
+          <motion.div 
+            className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={containerVariants}
+          >
+            {chessGuides.map((guide) => (
               <motion.div
                 key={guide.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                variants={cardVariants}
               >
                 <Link href={guide.href}>
-                  <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardHeader>
-                      <div className="flex items-center justify-between mb-2">
-                        <guide.icon className="h-8 w-8 text-primary" />
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${guide.levelColor} text-white`}>
+                  <Card className="h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group">
+                    <CardHeader className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+                          <guide.icon className="h-6 w-6 text-primary" />
+                        </div>
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${guide.levelColor} text-white`}>
                           {guide.level}
                         </span>
                       </div>
-                      <CardTitle className="text-lg">{guide.title}</CardTitle>
-                      <CardDescription>{guide.description}</CardDescription>
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors">{guide.title}</CardTitle>
+                      <CardDescription className="text-sm">{guide.description}</CardDescription>
                     </CardHeader>
                   </Card>
                 </Link>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
 
-          <div className="text-center mt-8">
-            <Button asChild size="lg">
+          <motion.div 
+            className="text-center mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.3 }}
+          >
+            <Button asChild size="lg" className="rounded-xl h-12 px-8">
               <Link href="/chess-guides">
                 Browse All Guides
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Why Royal Gambit Section */}
-      <section className="py-20">
+      <section className="py-24">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUpVariants}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
               Why Royal Gambit?
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
@@ -596,86 +754,100 @@ export function HomePageClient() {
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {whyRoyalGambit.map((feature, index) => (
+          <motion.div 
+            className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={containerVariants}
+          >
+            {whyRoyalGambit.map((feature) => (
               <motion.div
                 key={feature.title}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                variants={cardVariants}
               >
-                <Card className="h-full text-center">
-                  <CardContent className="pt-6">
-                    <feature.icon className="h-10 w-10 mx-auto mb-3 text-primary" />
+                <Card className="h-full text-center border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-500 group">
+                  <CardContent className="pt-8 pb-6">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
+                      <feature.icon className="h-8 w-8 text-primary" />
+                    </div>
                     <h3 className="font-semibold mb-2">{feature.title}</h3>
                     <p className="text-sm text-muted-foreground">{feature.description}</p>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-muted/30">
+      <section className="py-24 bg-secondary/50">
         <div className="container mx-auto px-4">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-100px" }}
+            variants={fadeUpVariants}
+            className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
               Frequently Asked Questions
             </h2>
           </motion.div>
 
-          <div className="max-w-3xl mx-auto space-y-4">
+          <motion.div 
+            className="max-w-3xl mx-auto space-y-4"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-50px" }}
+            variants={containerVariants}
+          >
             {homeFaqs.map((faq, index) => (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
+                variants={cardVariants}
               >
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-semibold text-lg mb-2">{faq.question}</h3>
-                    <p className="text-muted-foreground">{faq.answer}</p>
+                <Card className="border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-300">
+                  <CardContent className="p-8">
+                    <h3 className="font-semibold text-lg mb-3">{faq.question}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
                   </CardContent>
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section className="py-24">
         <div className="container mx-auto px-4 text-center">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 40, scale: 0.95 }}
+            whileInView={{ opacity: 1, y: 0, scale: 1 }}
             viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           >
-            <Card className="max-w-2xl mx-auto bg-gradient-to-br from-primary/10 to-accent/10 border-primary/20">
-              <CardContent className="py-12">
-                <h2 className="text-3xl font-bold mb-4">Ready to Start?</h2>
-                <p className="text-muted-foreground mb-6">
+            <Card className="max-w-2xl mx-auto border-0 shadow-2xl shadow-primary/10 bg-gradient-to-br from-card via-card to-primary/5 overflow-hidden relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
+              <CardContent className="py-16 relative">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-primary/10 flex items-center justify-center">
+                  <Crown className="w-10 h-10 text-primary" />
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Start?</h2>
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                   Create a free account to play against bots, challenge friends, access interactive lessons, and track your progress.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button asChild size="lg">
+                  <Button asChild size="lg" className="rounded-xl h-14 px-8 text-lg shadow-lg shadow-primary/20">
                     <Link href="/login">
-                      <ChevronRight className="mr-2 h-5 w-5" />
                       Get Started Free
+                      <ChevronRight className="ml-2 h-5 w-5" />
                     </Link>
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-4">
+                <p className="text-xs text-muted-foreground mt-6">
                   Sign up with email or Google. No credit card required.
                 </p>
               </CardContent>
