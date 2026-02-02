@@ -597,110 +597,85 @@ function LiveActivityPulse() {
   );
 }
 
-// Custom cursor follower for landing page
+// Custom cursor follower for landing page - elegant and minimal
 function CustomCursor() {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+    
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
-      setIsVisible(true);
     };
 
-    const handleMouseEnter = (e: MouseEvent) => {
+    const handleMouseOver = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest('a, button, [role="button"]')) {
+      if (target.closest('a, button, [role="button"], input, textarea')) {
         setIsHovering(true);
+      } else {
+        setIsHovering(false);
       }
-    };
-
-    const handleMouseLeave = () => {
-      setIsHovering(false);
     };
 
     const handleMouseDown = () => setIsClicking(true);
     const handleMouseUp = () => setIsClicking(false);
-    const handleMouseOut = () => setIsVisible(false);
 
     window.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseover', handleMouseEnter);
-    document.addEventListener('mouseout', handleMouseLeave);
+    document.addEventListener('mouseover', handleMouseOver);
     document.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mouseup', handleMouseUp);
-    document.addEventListener('mouseout', handleMouseOut);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseover', handleMouseEnter);
-      document.removeEventListener('mouseout', handleMouseLeave);
+      document.removeEventListener('mouseover', handleMouseOver);
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('mouseout', handleMouseOut);
     };
   }, []);
 
-  // Only show on desktop
-  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-    return null;
-  }
+  // Don't render on server or mobile
+  if (!isMounted) return null;
 
   return (
     <>
-      {/* Main cursor dot */}
+      {/* Elegant outer glow ring */}
       <motion.div
-        className="fixed top-0 left-0 w-3 h-3 bg-primary rounded-full pointer-events-none z-[9999] mix-blend-difference hidden lg:block"
+        className="fixed top-0 left-0 w-8 h-8 rounded-full pointer-events-none z-[9999] hidden lg:flex items-center justify-center"
+        style={{
+          background: isHovering 
+            ? 'radial-gradient(circle, hsl(var(--primary) / 0.3) 0%, transparent 70%)' 
+            : 'radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%)',
+        }}
         animate={{
-          x: mousePos.x - 6,
-          y: mousePos.y - 6,
-          scale: isClicking ? 0.8 : 1,
-          opacity: isVisible ? 1 : 0,
+          x: mousePos.x - 16,
+          y: mousePos.y - 16,
+          scale: isHovering ? 2 : isClicking ? 0.8 : 1,
+        }}
+        transition={{
+          type: "spring",
+          stiffness: 300,
+          damping: 20,
+          mass: 0.5,
+        }}
+      />
+      
+      {/* Inner dot */}
+      <motion.div
+        className="fixed top-0 left-0 w-2 h-2 bg-primary rounded-full pointer-events-none z-[9999] hidden lg:block"
+        animate={{
+          x: mousePos.x - 4,
+          y: mousePos.y - 4,
+          scale: isClicking ? 0.5 : isHovering ? 0.8 : 1,
         }}
         transition={{
           type: "spring",
           stiffness: 500,
           damping: 28,
-          mass: 0.5,
         }}
       />
-      
-      {/* Outer ring */}
-      <motion.div
-        className="fixed top-0 left-0 w-10 h-10 border-2 border-primary/50 rounded-full pointer-events-none z-[9998] hidden lg:block"
-        animate={{
-          x: mousePos.x - 20,
-          y: mousePos.y - 20,
-          scale: isHovering ? 1.5 : isClicking ? 0.9 : 1,
-          opacity: isVisible ? 0.6 : 0,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 150,
-          damping: 15,
-          mass: 0.8,
-        }}
-      />
-
-      {/* Chess piece that follows cursor on hover */}
-      <motion.div
-        className="fixed top-0 left-0 pointer-events-none z-[9997] hidden lg:block"
-        animate={{
-          x: mousePos.x + 15,
-          y: mousePos.y + 15,
-          opacity: isHovering && isVisible ? 1 : 0,
-          scale: isHovering ? 1 : 0.5,
-          rotate: isHovering ? 0 : -45,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 200,
-          damping: 20,
-        }}
-      >
-        <ChessPiece type="knight" className="w-6 h-6 text-primary/70" />
-      </motion.div>
     </>
   );
 }
@@ -742,23 +717,40 @@ function AnimatedGridBackground() {
   );
 }
 
-// Floating particles
+// Floating particles - generated client-side to avoid hydration mismatch
 function FloatingParticles() {
-  const particles = Array.from({ length: 30 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 4 + 2,
-    duration: Math.random() * 10 + 15,
-    delay: Math.random() * 5,
-  }));
+  const [particles, setParticles] = useState<Array<{
+    id: number;
+    x: number;
+    y: number;
+    size: number;
+    duration: number;
+    delay: number;
+    xOffset: number;
+  }>>([]);
+
+  useEffect(() => {
+    // Generate particles only on client to avoid hydration issues
+    const generated = Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 3 + 2,
+      duration: Math.random() * 8 + 12,
+      delay: Math.random() * 5,
+      xOffset: Math.random() * 40 - 20,
+    }));
+    setParticles(generated);
+  }, []);
+
+  if (particles.length === 0) return null;
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {particles.map((particle) => (
         <motion.div
           key={particle.id}
-          className="absolute rounded-full bg-primary/20"
+          className="absolute rounded-full bg-primary/15"
           style={{
             left: `${particle.x}%`,
             top: `${particle.y}%`,
@@ -766,9 +758,9 @@ function FloatingParticles() {
             height: particle.size,
           }}
           animate={{
-            y: [0, -100, 0],
-            x: [0, Math.random() * 50 - 25, 0],
-            opacity: [0, 0.6, 0],
+            y: [0, -80, 0],
+            x: [0, particle.xOffset, 0],
+            opacity: [0, 0.5, 0],
             scale: [0.5, 1, 0.5],
           }}
           transition={{
@@ -807,13 +799,15 @@ function MorphingBlob({ className, color }: { className?: string; color: string 
 
 // Glowing orb with mouse interaction
 function InteractiveGlowOrb() {
-  const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({
-        x: e.clientX / window.innerWidth,
-        y: e.clientY / window.innerHeight,
+        x: (e.clientX / window.innerWidth) * 100,
+        y: (e.clientY / window.innerHeight) * 100,
       });
     };
 
@@ -821,21 +815,23 @@ function InteractiveGlowOrb() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  if (!isMounted) return null;
+
   return (
     <motion.div
-      className="absolute w-[600px] h-[600px] rounded-full pointer-events-none"
+      className="absolute w-[500px] h-[500px] rounded-full pointer-events-none opacity-60"
       style={{
-        background: `radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%)`,
-        filter: "blur(60px)",
+        background: `radial-gradient(circle, hsl(var(--primary) / 0.12) 0%, transparent 70%)`,
+        filter: "blur(80px)",
       }}
       animate={{
-        x: `calc(${mousePos.x * 100}% - 300px)`,
-        y: `calc(${mousePos.y * 100}% - 300px)`,
+        left: `calc(${mousePos.x}% - 250px)`,
+        top: `calc(${mousePos.y}% - 250px)`,
       }}
       transition={{
         type: "spring",
-        stiffness: 50,
-        damping: 30,
+        stiffness: 30,
+        damping: 25,
       }}
     />
   );
@@ -854,7 +850,7 @@ export function HomePageClient() {
   const imageParallax = useTransform(scrollYProgress, [0, 1], [0, 100]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background cursor-none lg:cursor-none">
+    <div className="min-h-screen flex flex-col bg-background lg:cursor-none">
       {/* Custom cursor - only on desktop */}
       <CustomCursor />
       

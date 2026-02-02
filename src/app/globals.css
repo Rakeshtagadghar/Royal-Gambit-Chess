@@ -272,17 +272,18 @@
   background-color: rgba(100, 200, 100, 0.25) !important;
 }
 
-/* Custom cursor styles for landing page */
+/* Custom cursor styles for landing page - only hides default on desktop */
 @media (min-width: 1024px) {
-  .cursor-none,
-  .cursor-none * {
-    cursor: none !important;
+  .lg\:cursor-none {
+    cursor: none;
   }
   
-  .cursor-none a,
-  .cursor-none button,
-  .cursor-none [role="button"] {
-    cursor: none !important;
+  .lg\:cursor-none a,
+  .lg\:cursor-none button,
+  .lg\:cursor-none [role="button"],
+  .lg\:cursor-none input,
+  .lg\:cursor-none textarea {
+    cursor: none;
   }
 }
 
