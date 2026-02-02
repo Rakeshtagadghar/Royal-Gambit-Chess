@@ -1,0 +1,448 @@
+{
+    "spec_name": "royal-gambit-gtm-ukgdpr-events-v1",
+    "spec_version": "1.0.0",
+    "context": {
+      "app_name": "Royal Gambit Chess",
+      "stack": "Next.js App Router + TypeScript",
+      "note": "Google Analytics is already added in the app. This spec adds GTM + a clean dataLayer event model + Consent Mode v2 gating.",
+      "routes_from_requirements": {
+        "home": "/",
+        "login": "/login",
+        "register": "/register",
+        "play": "/play",
+        "game_room": "/game/[id]",
+        "profile": "/profile/[username]",
+        "settings": "/settings",
+        "learn_hub": "/learn",
+        "learn_track": "/learn/track/[trackSlug]",
+        "learn_lesson": "/learn/lesson/[lessonSlug]",
+        "learn_practice": "/learn/practice/[practiceSlug]",
+        "learn_progress": "/learn/progress"
+      },
+      "core_features_from_requirements": [
+        "Auth",
+        "Bot play",
+        "PvP play realtime",
+        "Invitations",
+        "Matchmaking",
+        "Game archive/review (if enabled)",
+        "Learn/Tutorials"
+      ]
+    },
+    "uk_gdpr_pecr_compliance_requirements": {
+      "principles": [
+        "Default to no non-essential cookies until user consent is obtained (PECR/UK GDPR expectation for analytics/marketing cookies).",
+        "Provide Accept and Reject with equal prominence; rejection must be as easy as acceptance.",
+        "Do not send PII (email, username, userId) to Google tags/events; use non-identifying ids if needed (session_id, game_id uuid is OK if not linkable to a natural person).",
+        "Honor consent changes: allow user to change preferences later (settings page).",
+        "Document purposes, vendors, retention in cookie policy + privacy policy."
+      ],
+      "consent_mode_v2": {
+        "required_signals": [
+          "analytics_storage",
+          "ad_storage",
+          "ad_user_data",
+          "ad_personalization"
+        ],
+        "default_state": {
+          "analytics_storage": "denied",
+          "ad_storage": "denied",
+          "ad_user_data": "denied",
+          "ad_personalization": "denied",
+          "wait_for_update_ms": 500
+        },
+        "update_state_on_user_choice": true,
+        "references": [
+          "Google Consent Mode: default denied unless configured; update after banner interaction.",
+          "Google Tag Platform consent guide explains behavior when denied."
+        ]
+      },
+      "sources": {
+        "ico_cookies_guidance": "Use ICO guidance for cookies and consent standards.",
+        "google_consent_mode": "Use Google consent mode docs for default + update flow."
+      }
+    },
+    "implementation_plan": {
+      "phase_0_decisions": [
+        {
+          "decision": "cmp_selection",
+          "options": [
+            "Use your existing CMP if present; it must be able to emit consent state changes",
+            "If no CMP: add a lightweight CMP that supports Consent Mode v2 signals"
+          ],
+          "requirement": "CMP must expose an onConsentChanged callback and allow accept/reject with equal ease."
+        },
+        {
+          "decision": "ga_placement",
+          "options": [
+            "Preferred: move GA4 tag into GTM and remove direct gtag snippet (cleanest governance).",
+            "Alternative: keep existing GA snippet but ensure Consent Mode v2 default+update are applied BEFORE GA loads."
+          ],
+          "instruction": "Choose one path; do not double-fire pageviews."
+        }
+      ],
+      "phase_1_add_gtm_bootstrap": [
+        "Create GTM container in Google Tag Manager (Web).",
+        "Add GTM container snippet to Next.js root layout (App Router) in a consent-aware way.",
+        "Create a small client-only module to push dataLayer events: window.dataLayer.push({event, ...payload}).",
+        "Add route-change tracking for App Router navigation to emit a single 'page_view' style event per navigation."
+      ],
+      "phase_2_consent_mode_wiring": [
+        "Implement Consent Mode v2 default state at the earliest possible time (Consent Initialization).",
+        "Connect CMP choice -> gtag('consent','update', ...) and a dataLayer event 'consent_update'.",
+        "Block any analytics/ads tags until consent grants relevant storage (analytics_storage / ad_storage...).",
+        "Expose a Settings UI action to reopen consent preferences and apply changes."
+      ],
+      "phase_3_event_model_and_tags": [
+        "Implement event taxonomy below (recommended GA4 names where possible).",
+        "Configure GTM triggers/variables for each event.",
+        "Send events to GA4 via GTM GA4 Event tags (or to existing GA via dataLayer->gtag mapping, if keeping GA snippet).",
+        "Add basic error/exception and web vitals events (consent-gated)."
+      ],
+      "phase_4_validation_and_tests": [
+        "Use GTM Preview/Debug to verify firing rules with consent denied vs granted.",
+        "Verify no cookies are set pre-consent for analytics.",
+        "Add Playwright E2E tests: consent accept/reject flows + verify tags blocked/unblocked.",
+        "Add unit tests for event payload builders (no PII; required fields present)."
+      ]
+    },
+    "data_layer_contract": {
+      "global_rules": {
+        "naming": "Use snake_case keys; event names use GA4 recommended where relevant.",
+        "no_pii": [
+          "Do not include: email, username, full name, IP, exact location, chat message content.",
+          "Allow: session_id (random UUID v4), game_id (uuid), track_slug, lesson_slug, time_control metadata."
+        ],
+        "required_common_fields": [
+          "event",
+          "app_env",
+          "app_version",
+          "session_id",
+          "timestamp_iso"
+        ],
+        "recommended_common_fields": [
+          "page_path",
+          "page_title",
+          "referrer",
+          "is_logged_in"
+        ]
+      },
+      "common_payload_example": {
+        "app_env": "production|staging|development",
+        "app_version": "semver",
+        "session_id": "uuid_v4",
+        "timestamp_iso": "ISO_8601",
+        "page_path": "/play",
+        "page_title": "Play",
+        "referrer": "string_or_empty",
+        "is_logged_in": true
+      }
+    },
+    "event_taxonomy": [
+      {
+        "event": "page_view",
+        "when": "On initial load and on client-side route change (App Router navigation).",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["page_path", "page_title", "referrer"]
+      },
+      {
+        "event": "sign_up",
+        "when": "User successfully completes registration.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["method"],
+        "notes": "Use GA4 recommended event name. method could be 'email' or 'oauth_google' etc."
+      },
+      {
+        "event": "login",
+        "when": "User successfully logs in.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["method"]
+      },
+      {
+        "event": "logout",
+        "when": "User logs out.",
+        "consent_required": "analytics_storage=granted",
+        "payload": []
+      },
+      {
+        "event": "select_content",
+        "when": "User clicks primary CTAs like 'Play', 'Learn', 'Leaderboard teaser' on Home.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["content_type", "item_id"],
+        "notes": "GA4 recommended event name for content selection."
+      },
+      {
+        "event": "invite_create",
+        "when": "Invitation created on /play via InviteModal.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["time_control_initial_sec", "time_control_increment_sec", "preferred_color", "has_message"]
+      },
+      {
+        "event": "invite_respond",
+        "when": "Invitation accepted/declined on /play.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["action", "time_control_initial_sec", "time_control_increment_sec"]
+      },
+      {
+        "event": "matchmaking_join",
+        "when": "User joins matchmaking queue.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["mode", "time_control_initial_sec", "time_control_increment_sec"]
+      },
+      {
+        "event": "matchmaking_leave",
+        "when": "User leaves matchmaking queue.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["mode"]
+      },
+      {
+        "event": "game_start",
+        "when": "Game room /game/[id] becomes active (first render with game state ready).",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["game_id", "mode", "time_control_initial_sec", "time_control_increment_sec", "opponent_type", "is_ranked"]
+      },
+      {
+        "event": "game_end",
+        "when": "Game finishes (checkmate/stalemate/timeout/resign/draw).",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["game_id", "end_reason", "result", "moves_count", "duration_sec"]
+      },
+      {
+        "event": "move_summary",
+        "when": "Every N moves (e.g., 10) or on game end; DO NOT send per-move events to avoid spam.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["game_id", "moves_bucket_size", "bucket_index", "player_color", "time_spent_sec_bucket"]
+      },
+      {
+        "event": "chat_message_send",
+        "when": "User sends a chat message in game. Do NOT include message content.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["game_id", "chat_context", "message_length_bucket"]
+      },
+      {
+        "event": "tutorial_begin",
+        "when": "User starts a Learn lesson (/learn/lesson/[lessonSlug]) for the first time in a session.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["track_slug", "lesson_slug", "level"]
+      },
+      {
+        "event": "tutorial_complete",
+        "when": "User completes a lesson.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["track_slug", "lesson_slug", "level", "attempts", "hints_used", "time_spent_sec"]
+      },
+      {
+        "event": "level_start",
+        "when": "User starts a practice pack (/learn/practice/[practiceSlug]).",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["practice_slug", "topic", "level_name"]
+      },
+      {
+        "event": "level_end",
+        "when": "User finishes a practice pack.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["practice_slug", "topic", "level_name", "score", "time_spent_sec"]
+      },
+      {
+        "event": "settings_change",
+        "when": "User changes theme, sound, board prefs, or privacy settings on /settings.",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["setting_key", "setting_value_bucket"]
+      },
+      {
+        "event": "consent_update",
+        "when": "User accepts/rejects/updates cookie preferences.",
+        "consent_required": "none",
+        "payload": ["consent_analytics", "consent_ads", "consent_functional", "source", "region"]
+      },
+      {
+        "event": "exception",
+        "when": "Unhandled error boundary hit or critical API errors (sampled).",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["error_code", "error_area", "is_fatal"],
+        "notes": "Do not send stack traces to GA; keep it high-level. Use Sentry/etc separately if desired (also consent-gated)."
+      },
+      {
+        "event": "web_vitals",
+        "when": "On reporting Core Web Vitals (LCP/CLS/INP etc).",
+        "consent_required": "analytics_storage=granted",
+        "payload": ["metric_name", "metric_value", "metric_rating", "navigation_type"]
+      }
+    ],
+    "gtm_container_spec": {
+      "variables": [
+        "DLV - event",
+        "DLV - session_id",
+        "DLV - app_env",
+        "DLV - app_version",
+        "DLV - page_path",
+        "DLV - game_id",
+        "DLV - track_slug",
+        "DLV - lesson_slug"
+      ],
+      "triggers": [
+        {
+          "name": "Consent Initialization - Default Denied",
+          "type": "consent_initialization",
+          "fires": "Always",
+          "purpose": "Set consent defaults before any tag fires."
+        },
+        {
+          "name": "Custom Event - consent_update",
+          "type": "custom_event",
+          "event_name": "consent_update"
+        },
+        {
+          "name": "Custom Event - page_view",
+          "type": "custom_event",
+          "event_name": "page_view"
+        },
+        {
+          "name": "Custom Event - auth events",
+          "type": "custom_event_group",
+          "event_names": ["sign_up", "login", "logout"]
+        },
+        {
+          "name": "Custom Event - game events",
+          "type": "custom_event_group",
+          "event_names": ["game_start", "game_end", "move_summary", "chat_message_send"]
+        },
+        {
+          "name": "Custom Event - learn events",
+          "type": "custom_event_group",
+          "event_names": ["tutorial_begin", "tutorial_complete", "level_start", "level_end"]
+        },
+        {
+          "name": "Custom Event - settings_change",
+          "type": "custom_event",
+          "event_name": "settings_change"
+        },
+        {
+          "name": "Custom Event - exception",
+          "type": "custom_event",
+          "event_name": "exception"
+        },
+        {
+          "name": "Custom Event - web_vitals",
+          "type": "custom_event",
+          "event_name": "web_vitals"
+        }
+      ],
+      "tags": [
+        {
+          "name": "Consent Mode v2 - Default",
+          "type": "consent_mode",
+          "trigger": "Consent Initialization - Default Denied",
+          "config": {
+            "analytics_storage": "denied",
+            "ad_storage": "denied",
+            "ad_user_data": "denied",
+            "ad_personalization": "denied",
+            "wait_for_update_ms": 500
+          }
+        },
+        {
+          "name": "GA4 Configuration (via GTM)",
+          "type": "ga4_config",
+          "trigger": "Custom Event - page_view",
+          "consent": {
+            "required": ["analytics_storage"]
+          },
+          "config": {
+            "send_page_view": false,
+            "fields": {
+              "page_location": "{{DLV - page_path}}",
+              "session_id": "{{DLV - session_id}}",
+              "app_env": "{{DLV - app_env}}",
+              "app_version": "{{DLV - app_version}}"
+            }
+          },
+          "note": "If keeping existing GA snippet, do NOT add this tag; instead use GA4 Event tags only (or remove entirely and route all GA through GTM)."
+        },
+        {
+          "name": "GA4 Event - All App Events",
+          "type": "ga4_event",
+          "trigger_groups": [
+            "Custom Event - auth events",
+            "Custom Event - game events",
+            "Custom Event - learn events",
+            "Custom Event - settings_change",
+            "Custom Event - exception",
+            "Custom Event - web_vitals"
+          ],
+          "consent": {
+            "required": ["analytics_storage"]
+          },
+          "mapping": {
+            "event_name": "{{DLV - event}}",
+            "event_params": "Pass through all non-PII DLV keys"
+          }
+        }
+      ]
+    },
+    "nextjs_app_changes": {
+      "files_to_add": [
+        {
+          "path": "src/lib/analytics/datalayer.ts",
+          "purpose": "Single safe push function with schema guard + PII stripping."
+        },
+        {
+          "path": "src/lib/analytics/session.ts",
+          "purpose": "Generate and persist anonymous session_id (memory + localStorage only if functional consent is granted; otherwise keep in-memory)."
+        },
+        {
+          "path": "src/components/consent/ConsentBanner.tsx",
+          "purpose": "CMP UI (if you do not already have one). Must support Accept/Reject and later changes."
+        }
+      ],
+      "files_to_modify": [
+        {
+          "path": "src/app/layout.tsx",
+          "changes": [
+            "Add GTM snippet (and optional noscript) in a privacy-aware manner.",
+            "Ensure Consent Mode default runs before analytics tags (either via GTM Consent Initialization or inline if not possible)."
+          ]
+        },
+        {
+          "path": "src/app/(routes)/... client pages",
+          "changes": [
+            "Emit dataLayer events at key moments: auth success, invite actions, matchmaking join/leave, game start/end, learn begin/complete, settings changes."
+          ]
+        }
+      ],
+      "route_change_tracking": {
+        "approach": "Use App Router hooks (usePathname + useSearchParams) in a client component mounted in layout to emit 'page_view' once per navigation when analytics consent is granted.",
+        "dedupe": "Maintain last_page_path in memory to avoid duplicate events."
+      }
+    },
+    "acceptance_criteria": [
+      "With consent rejected: GA/GTM does not set analytics cookies; analytics tags do not fire (except consent defaults).",
+      "With consent accepted: page_view and key events fire once with correct payload.",
+      "No PII is present in event payloads.",
+      "Reject is as easy as accept in the banner UI; consent can be changed later in Settings.",
+      "No double pageviews (either GA in GTM OR direct GA snippet; not both).",
+      "GTM Preview shows correct consent state transitions and tag firing behavior."
+    ],
+    "testing_plan": {
+      "unit": [
+        "datalayer push function strips disallowed keys (email/username/user_id)",
+        "event builders include required_common_fields",
+        "move_summary bucketing logic works (every N moves)"
+      ],
+      "e2e_playwright": [
+        "Visit / with banner visible -> click Reject -> navigate to /play -> confirm no analytics tags fired (via network assertions where feasible).",
+        "Visit / -> Accept -> navigate /play -> start bot game -> expect game_start then game_end events.",
+        "Learn: start a lesson -> tutorial_begin; finish -> tutorial_complete.",
+        "Settings: change theme -> settings_change event."
+      ]
+    },
+    "notes_for_ai_executor": {
+      "do_not_guess_ids": [
+        "GTM container ID",
+        "GA4 measurement ID"
+      ],
+      "implementation_rule": "Where IDs are required, read them from env vars (NEXT_PUBLIC_GTM_ID, NEXT_PUBLIC_GA_ID).",
+      "privacy_rule": "If uncertain whether a field is personal data, do not send it."
+    }
+  }
+  

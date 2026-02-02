@@ -19,8 +19,9 @@ test.describe('Leaderboard', () => {
     // Wait a moment for content to load
     await page.waitForTimeout(1000);
 
-    // Either we have player entries OR empty state message - both are valid
-    const playerEntries = page.locator('a[href*="/profile"], a[href*="/u/"]');
+    // Player entries are divs with cursor-pointer class containing usernames (not anchor tags)
+    // Look for elements with @ username pattern which indicates player entries
+    const playerEntries = page.locator('.cursor-pointer:has-text("@")');
     const emptyState = page.getByText(/no players ranked yet|be the first to play/i);
 
     const playerCount = await playerEntries.count();
@@ -68,15 +69,15 @@ test.describe('Leaderboard', () => {
     // Wait a moment for content to load
     await page.waitForTimeout(1000);
 
-    // Check for user links (if leaderboard has data) or empty state
-    const userLinks = page.locator('a[href*="/profile"], a[href*="/u/"]');
+    // Player entries are divs with cursor-pointer class containing usernames (not anchor tags)
+    const playerEntries = page.locator('.cursor-pointer:has-text("@")');
     const emptyState = page.getByText(/no players ranked yet|be the first to play/i);
 
-    const userCount = await userLinks.count();
+    const playerCount = await playerEntries.count();
     const emptyStateVisible = await emptyState.first().isVisible().catch(() => false);
 
     // Either players with data or empty state is valid
-    expect(userCount > 0 || emptyStateVisible).toBe(true);
+    expect(playerCount > 0 || emptyStateVisible).toBe(true);
   });
 
   test('should navigate to player profile when clicking username', async ({ page }) => {
@@ -84,12 +85,15 @@ test.describe('Leaderboard', () => {
     await page.waitForLoadState('domcontentloaded');
     await dismissCookieBanner(page);
 
-    // Find a user link
-    const userLink = page.locator('a[href*="/profile"], a[href*="/u/"]').first();
-    const userCount = await page.locator('a[href*="/profile"], a[href*="/u/"]').count();
+    // Wait for content to load
+    await page.waitForTimeout(1000);
 
-    if (userCount > 0) {
-      await userLink.click();
+    // Player entries are clickable divs with cursor-pointer containing usernames
+    const playerEntry = page.locator('.cursor-pointer:has-text("@")').first();
+    const playerCount = await page.locator('.cursor-pointer:has-text("@")').count();
+
+    if (playerCount > 0) {
+      await playerEntry.click();
 
       // Should navigate to profile page
       await expect(page).toHaveURL(/\/profile\/|\/u\//);

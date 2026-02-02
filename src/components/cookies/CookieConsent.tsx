@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Cookie, X } from "lucide-react";
 import { updateGoogleConsent } from "@/components/analytics/GoogleConsentMode";
+import { pushConsentUpdate } from "@/lib/analytics/datalayer";
 
 const COOKIE_CONSENT_KEY = "royalgambit_cookie_consent";
 
@@ -29,18 +30,36 @@ export function CookieConsent() {
     localStorage.setItem(COOKIE_CONSENT_KEY, "all");
     setShowBanner(false);
     updateGoogleConsent("all");
+    pushConsentUpdate({
+      consent_analytics: true,
+      consent_ads: true,
+      consent_functional: true,
+      source: "banner",
+    });
   };
 
   const acceptEssential = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "essential");
     setShowBanner(false);
     updateGoogleConsent("essential");
+    pushConsentUpdate({
+      consent_analytics: true,
+      consent_ads: false,
+      consent_functional: true,
+      source: "banner",
+    });
   };
 
   const rejectAll = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, "rejected");
     setShowBanner(false);
     updateGoogleConsent("rejected");
+    pushConsentUpdate({
+      consent_analytics: false,
+      consent_ads: false,
+      consent_functional: true,
+      source: "banner",
+    });
   };
 
   return (
