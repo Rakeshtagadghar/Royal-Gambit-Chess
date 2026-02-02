@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -26,9 +26,10 @@ import {
   CheckCircle,
   Sparkles,
   Play,
+  MousePointerClick,
 } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 
 const playFeatures = [
   {
@@ -354,6 +355,248 @@ function ChessBoardPattern({ className }: { className?: string }) {
   );
 }
 
+// Interactive mini chess board for hero section
+function InteractiveChessBoard() {
+  const [hoveredSquare, setHoveredSquare] = useState<string | null>(null);
+  const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
+  const [pieces, setPieces] = useState<Record<string, { type: string; color: 'w' | 'b' }>>({
+    'e1': { type: 'king', color: 'w' },
+    'd1': { type: 'queen', color: 'w' },
+    'a1': { type: 'rook', color: 'w' },
+    'h1': { type: 'rook', color: 'w' },
+    'c1': { type: 'bishop', color: 'w' },
+    'f1': { type: 'bishop', color: 'w' },
+    'b1': { type: 'knight', color: 'w' },
+    'g1': { type: 'knight', color: 'w' },
+    'a2': { type: 'pawn', color: 'w' },
+    'b2': { type: 'pawn', color: 'w' },
+    'c2': { type: 'pawn', color: 'w' },
+    'd2': { type: 'pawn', color: 'w' },
+    'e4': { type: 'pawn', color: 'w' },
+    'f2': { type: 'pawn', color: 'w' },
+    'g2': { type: 'pawn', color: 'w' },
+    'h2': { type: 'pawn', color: 'w' },
+    'e8': { type: 'king', color: 'b' },
+    'd8': { type: 'queen', color: 'b' },
+    'a8': { type: 'rook', color: 'b' },
+    'h8': { type: 'rook', color: 'b' },
+    'c8': { type: 'bishop', color: 'b' },
+    'f8': { type: 'bishop', color: 'b' },
+    'b8': { type: 'knight', color: 'b' },
+    'g8': { type: 'knight', color: 'b' },
+    'a7': { type: 'pawn', color: 'b' },
+    'b7': { type: 'pawn', color: 'b' },
+    'c7': { type: 'pawn', color: 'b' },
+    'd7': { type: 'pawn', color: 'b' },
+    'e5': { type: 'pawn', color: 'b' },
+    'f7': { type: 'pawn', color: 'b' },
+    'g7': { type: 'pawn', color: 'b' },
+    'h7': { type: 'pawn', color: 'b' },
+  });
+
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const ranks = [8, 7, 6, 5, 4, 3, 2, 1];
+
+  const getPieceSymbol = (type: string, color: 'w' | 'b') => {
+    const symbols: Record<string, Record<string, string>> = {
+      king: { w: '♔', b: '♚' },
+      queen: { w: '♕', b: '♛' },
+      rook: { w: '♖', b: '♜' },
+      bishop: { w: '♗', b: '♝' },
+      knight: { w: '♘', b: '♞' },
+      pawn: { w: '♙', b: '♟' },
+    };
+    return symbols[type]?.[color] || '';
+  };
+
+  const handleSquareClick = (square: string) => {
+    if (selectedPiece === square) {
+      setSelectedPiece(null);
+    } else if (pieces[square]) {
+      setSelectedPiece(square);
+    } else if (selectedPiece) {
+      // Move piece
+      setPieces(prev => {
+        const newPieces = { ...prev };
+        newPieces[square] = newPieces[selectedPiece];
+        delete newPieces[selectedPiece];
+        return newPieces;
+      });
+      setSelectedPiece(null);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9, rotateX: 20 }}
+      animate={{ opacity: 1, scale: 1, rotateX: 0 }}
+      transition={{ duration: 0.8, delay: 0.5, type: "spring" }}
+      className="relative perspective-1000"
+    >
+      <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-primary/20 border border-primary/10 bg-card/50 backdrop-blur-sm p-3">
+        {/* Glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
+        
+        <div className="grid grid-cols-8 gap-0 relative">
+          {ranks.map((rank) =>
+            files.map((file) => {
+              const square = `${file}${rank}`;
+              const isLight = (files.indexOf(file) + rank) % 2 === 1;
+              const piece = pieces[square];
+              const isHovered = hoveredSquare === square;
+              const isSelected = selectedPiece === square;
+
+              return (
+                <motion.div
+                  key={square}
+                  className={`
+                    w-8 h-8 md:w-10 md:h-10 flex items-center justify-center cursor-pointer relative
+                    transition-colors duration-200
+                    ${isLight ? 'bg-amber-100' : 'bg-amber-800'}
+                    ${isHovered && !piece ? 'ring-2 ring-primary/50 ring-inset' : ''}
+                    ${isSelected ? 'ring-2 ring-primary ring-inset bg-primary/30' : ''}
+                  `}
+                  onMouseEnter={() => setHoveredSquare(square)}
+                  onMouseLeave={() => setHoveredSquare(null)}
+                  onClick={() => handleSquareClick(square)}
+                  whileHover={{ scale: piece ? 1.05 : 1 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <AnimatePresence mode="wait">
+                    {piece && (
+                      <motion.span
+                        key={`${square}-${piece.type}`}
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        exit={{ scale: 0, rotate: 180 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                        className={`text-2xl md:text-3xl select-none ${
+                          piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-gray-900 drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]'
+                        } ${isSelected ? 'animate-pulse' : ''}`}
+                      >
+                        {getPieceSymbol(piece.type, piece.color)}
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
+                  
+                  {/* Highlight dot for empty hovered squares when piece selected */}
+                  {selectedPiece && !piece && isHovered && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute w-3 h-3 rounded-full bg-primary/40"
+                    />
+                  )}
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+        
+        {/* Interactive hint */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.5 }}
+          className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap"
+        >
+          <MousePointerClick className="w-3 h-3" />
+          Click to move pieces
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+// Animated stats counter
+function AnimatedStat({ value, label, suffix = '' }: { value: number; label: string; suffix?: string }) {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    
+    let start = 0;
+    const duration = 2000;
+    const increment = value / (duration / 16);
+    
+    const timer = setInterval(() => {
+      start += increment;
+      if (start >= value) {
+        setCount(value);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(start));
+      }
+    }, 16);
+    
+    return () => clearInterval(timer);
+  }, [isVisible, value]);
+
+  return (
+    <div ref={ref} className="text-center">
+      <motion.div
+        initial={{ scale: 0.5, opacity: 0 }}
+        whileInView={{ scale: 1, opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ type: "spring", stiffness: 100 }}
+        className="text-4xl md:text-5xl font-bold text-primary"
+      >
+        {count.toLocaleString()}{suffix}
+      </motion.div>
+      <p className="text-muted-foreground text-sm mt-1">{label}</p>
+    </div>
+  );
+}
+
+// Live activity pulse indicator
+function LiveActivityPulse() {
+  const [pulses, setPulses] = useState<number[]>([]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPulses(prev => [...prev.slice(-4), Date.now()]);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative">
+        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+        {pulses.map((id) => (
+          <motion.div
+            key={id}
+            initial={{ scale: 1, opacity: 0.8 }}
+            animate={{ scale: 3, opacity: 0 }}
+            transition={{ duration: 1.5 }}
+            className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500"
+          />
+        ))}
+      </div>
+      <span className="text-sm text-emerald-600 font-medium">Live games in progress</span>
+    </div>
+  );
+}
+
 export function HomePageClient() {
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -416,69 +659,89 @@ export function HomePageClient() {
 
         <motion.div 
           style={{ opacity: heroOpacity, scale: heroScale, y: heroY }}
-          className="container mx-auto px-4 py-20 relative z-10"
+          className="container mx-auto px-4 py-12 md:py-20 relative z-10"
         >
-          <div className="max-w-4xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-8 border border-primary/20 backdrop-blur-sm"
-              >
-                <Sparkles className="w-4 h-4" />
-                Free to play and learn
-              </motion.div>
-              
-              {/* Elegant crown icon */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5, rotateY: -180 }}
-                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                transition={{ duration: 0.8, delay: 0.3, type: "spring" }}
-                className="flex justify-center mb-6"
-              >
-                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/10 shadow-xl shadow-primary/10">
-                  <Crown className="w-10 h-10 text-primary" />
-                </div>
-              </motion.div>
-              
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 tracking-tight">
-                <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground bg-clip-text">Royal</span>
-                <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">Gambit</span>
-              </h1>
-              <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed text-balance">
-                Play, Learn, and Master Chess.
-                Interactive lessons, tactical puzzles, and competitive play.
-              </p>
-            </motion.div>
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Left side - Text content */}
+              <div className="text-center lg:text-left">
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 border border-primary/20 backdrop-blur-sm"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Free to play and learn
+                  </motion.div>
+                  
+                  <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
+                    <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground bg-clip-text">Royal</span>
+                    <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">Gambit</span>
+                  </h1>
+                  <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed text-balance">
+                    Play, Learn, and Master Chess.
+                    Interactive lessons, tactical puzzles, and competitive play.
+                  </p>
 
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4 }}
+                    className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8"
+                  >
+                    <Button asChild size="lg" className="text-lg px-8 h-14 rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all duration-300 group">
+                      <Link href="/play">
+                        <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                        Play Now
+                        <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline" size="lg" className="text-lg px-8 h-14 rounded-xl border-2 hover:bg-secondary backdrop-blur-sm transition-all duration-300">
+                      <Link href="/login">
+                        Sign In
+                      </Link>
+                    </Button>
+                  </motion.div>
+
+                  {/* Live activity indicator */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 1 }}
+                    className="flex justify-center lg:justify-start"
+                  >
+                    <LiveActivityPulse />
+                  </motion.div>
+                </motion.div>
+              </div>
+
+              {/* Right side - Interactive Chess Board */}
+              <div className="flex justify-center lg:justify-end">
+                <InteractiveChessBoard />
+              </div>
+            </div>
+
+            {/* Stats row */}
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
+              transition={{ delay: 0.8, duration: 0.6 }}
+              className="mt-16 md:mt-24 grid grid-cols-3 gap-8 max-w-2xl mx-auto"
             >
-              <Button asChild size="lg" className="text-lg px-8 h-14 rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all duration-300 group">
-                <Link href="/play">
-                  <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  Play Now
-                  <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="text-lg px-8 h-14 rounded-xl border-2 hover:bg-secondary backdrop-blur-sm transition-all duration-300">
-                <Link href="/login">
-                  Sign In
-                </Link>
-              </Button>
+              <AnimatedStat value={50000} label="Games Played" suffix="+" />
+              <AnimatedStat value={500} label="Active Players" suffix="+" />
+              <AnimatedStat value={100} label="Chess Puzzles" suffix="+" />
             </motion.div>
 
             {/* Animated chess pieces row */}
             <motion.div
-              className="mt-20 flex justify-center gap-3 md:gap-6"
+              className="mt-12 md:mt-16 flex justify-center gap-3 md:gap-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.6 }}

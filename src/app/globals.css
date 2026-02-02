@@ -116,6 +116,11 @@
   --border: oklch(0.92 0.008 90);
   --input: oklch(0.96 0.008 90);
   --ring: oklch(0.50 0.20 145);
+  --chart-1: oklch(0.50 0.20 145);
+  --chart-2: oklch(0.58 0.22 30);
+  --chart-3: oklch(0.50 0.18 280);
+  --chart-4: oklch(0.55 0.15 200);
+  --chart-5: oklch(0.60 0.15 60);
   --sidebar: oklch(0.98 0.005 90);
   --sidebar-foreground: oklch(0.18 0.02 260);
   --sidebar-primary: oklch(0.50 0.20 145);
@@ -124,6 +129,10 @@
   --sidebar-accent-foreground: oklch(0.18 0.02 260);
   --sidebar-border: oklch(0.92 0.008 90);
   --sidebar-ring: oklch(0.50 0.20 145);
+  
+  /* Light theme chess board colors */
+  --board-light: oklch(0.92 0.03 75);
+  --board-dark: oklch(0.55 0.10 45);
 }
 
 @layer base {
