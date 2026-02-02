@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers/Providers";
 import { Toaster } from "@/components/ui/sonner";
-import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
+import { RouteTracker } from "@/components/analytics/RouteTracker";
 import { GoogleAdSense } from "@/components/analytics/GoogleAdSense";
 import { MicrosoftClarity } from "@/components/analytics/MicrosoftClarity";
 import { ReCaptcha } from "@/components/recaptcha/ReCaptcha";
 import { CookieConsent } from "@/components/cookies/CookieConsent";
 import { DevIndicator } from "@/components/DevIndicator";
-import { CONSENT_MODE_SCRIPT } from "@/components/analytics/GoogleConsentMode";
+import {
+  GTM_ID,
+  GTM_CONSENT_INIT_SCRIPT,
+  getGTMScript,
+  getGTMNoScriptSrc,
+} from "@/lib/analytics/gtm-config";
 import { BASE_URL } from "@/lib/config";
 
 const geistSans = Geist({
@@ -93,9 +99,16 @@ export default function RootLayout({
   return (
     <html lang="en" className="light">
       <head>
+        {/* Consent Mode v2 - MUST run before GTM */}
         <script
-          dangerouslySetInnerHTML={{ __html: CONSENT_MODE_SCRIPT }}
+          dangerouslySetInnerHTML={{ __html: GTM_CONSENT_INIT_SCRIPT }}
         />
+        {/* Google Tag Manager */}
+        {GTM_ID && (
+          <script
+            dangerouslySetInnerHTML={{ __html: getGTMScript() }}
+          />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteStructuredData) }}
@@ -104,11 +117,25 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased min-h-screen`}
       >
-        <GoogleAnalytics />
+        {/* GTM noscript fallback */}
+        {GTM_ID && (
+          <noscript>
+            <iframe
+              src={getGTMNoScriptSrc()}
+              height="0"
+              width="0"
+              style={{ display: "none", visibility: "hidden" }}
+              title="Google Tag Manager"
+            />
+          </noscript>
+        )}
         <GoogleAdSense />
         <MicrosoftClarity />
         <ReCaptcha />
         <Providers>
+          <Suspense fallback={null}>
+            <RouteTracker />
+          </Suspense>
           {children}
           <Toaster />
           <CookieConsent />
