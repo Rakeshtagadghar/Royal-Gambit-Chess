@@ -1,0 +1,287 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
+import { Navbar } from '@/components/layout/Navbar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/contexts/AuthContext';
+import { cn } from '@/lib/utils';
+import { 
+  Archive, 
+  Clock, 
+  Trophy, 
+  Bot, 
+  Users,
+  ChevronRight,
+  Loader2 
+} from 'lucide-react';
+
+interface GameRecord {
+  id: string;
+  mode: 'bot' | 'pvp';
+  status: string;
+  result: string;
+  termination: string | null;
+  white_id: string;
+  black_id: string;
+  created_at: string;
+  ended_at: string | null;
+  time_control: { baseMs: number; incrementMs: number };
+  pgn: string;
+}
+
+export default function ArchivePage() {
+  const t = useTranslations('archive');
+  const { user, isAuthenticated, isInitialized } = useAuth();
+  const [games, setGames] = useState<GameRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState({ wins: 0, losses: 0, draws: 0 });
+
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchGames = async () => {
+      try {
+        const gamesUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/games?select=*&or=(white_id.eq.${userId},black_id.eq.${userId})&status=eq.finished&order=created_at.desc&limit=50`;
+
+        const response = await fetch(gamesUrl, {
+          headers: {
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch games');
+        }
+
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        setGames(data || []);
+
+        // Calculate stats
+        let wins = 0, losses = 0, draws = 0;
+        (data || []).forEach((game: GameRecord) => {
+          const isWhite = game.white_id === userId;
+          if (game.result === '1/2-1/2') {
+            draws++;
+          } else if ((game.result === '1-0' && isWhite) || (game.result === '0-1' && !isWhite)) {
+            wins++;
+          } else {
+            losses++;
+          }
+        });
+        setStats({ wins, losses, draws });
+      } catch (error) {
+        console.error('Error fetching games:', error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchGames();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  const formatTimeControl = (tc: { baseMs: number; incrementMs: number }) => {
+    const minutes = tc.baseMs / 60000;
+    const increment = tc.incrementMs / 1000;
+    return increment > 0 ? `${minutes}+${increment}` : `${minutes}+0`;
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getResultDisplay = (game: GameRecord) => {
+    if (!user) return { text: game.result, color: 'default' };
+    
+    const isWhite = game.white_id === user.id;
+    const isWin = (game.result === '1-0' && isWhite) || (game.result === '0-1' && !isWhite);
+    const isDraw = game.result === '1/2-1/2';
+    
+    if (isWin) return { text: t('resultWon'), color: 'text-green-500' };
+    if (isDraw) return { text: t('resultDraw'), color: 'text-yellow-500' };
+    return { text: t('resultLost'), color: 'text-red-500' };
+  };
+
+  // Show loading only if not initialized AND not already authenticated
+  // (isAuthenticated being true implies initialization completed)
+  if (!isInitialized && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 text-center">
+          <Archive className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h1 className="text-2xl font-bold mb-2">{t('title')}</h1>
+          <p className="text-muted-foreground mb-4">{t('signInPrompt')}</p>
+          <Button asChild>
+            <Link href="/login?redirect=/archive">{t('signIn')}</Link>
+          </Button>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center gap-3 mb-8">
+            <Archive className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">{t('title')}</h1>
+              <p className="text-muted-foreground">{t('subtitle')}</p>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-3 gap-4 mb-8">
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Trophy className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                <p className="text-3xl font-bold text-green-500">{stats.wins}</p>
+                <p className="text-sm text-muted-foreground">{t('wins')}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="h-8 w-8 mx-auto mb-2 text-2xl">🤝</div>
+                <p className="text-3xl font-bold text-yellow-500">{stats.draws}</p>
+                <p className="text-sm text-muted-foreground">{t('draws')}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <div className="h-8 w-8 mx-auto mb-2 text-2xl">💔</div>
+                <p className="text-3xl font-bold text-red-500">{stats.losses}</p>
+                <p className="text-sm text-muted-foreground">{t('losses')}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Games List */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{t('recentGames')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : games.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{t('noGames')}</p>
+                  <Button asChild className="mt-4">
+                    <Link href="/play">{t('playFirstGame')}</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {games.map((game, index) => {
+                    const result = getResultDisplay(game);
+                    const isWhite = game.white_id === user?.id;
+                    
+                    return (
+                      <motion.div
+                        key={game.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <Link href={`/game/${game.id}/review`}>
+                          <div className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted transition-colors">
+                            {/* Game mode icon */}
+                            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
+                              {game.mode === 'bot' ? (
+                                <Bot className="h-5 w-5" />
+                              ) : (
+                                <Users className="h-5 w-5" />
+                              )}
+                            </div>
+
+                            {/* Game info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">
+                                  {game.mode === 'bot' ? t('vsStockfish') : t('onlineGame')}
+                                </span>
+                                <Badge variant="outline" className="text-xs">
+                                  {isWhite ? `♔ ${t('playingWhite')}` : `♚ ${t('playingBlack')}`}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {formatTimeControl(game.time_control)}
+                                <span>•</span>
+                                {formatDate(game.created_at)}
+                                {game.termination && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="capitalize">{game.termination.replace('_', ' ')}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Result */}
+                            <span className={cn('font-bold', result.color)}>
+                              {result.text}
+                            </span>
+
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        </Link>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      </main>
+    </div>
+  );
+}
+

@@ -1,0 +1,488 @@
+{
+  "spec_name": "royal_gambit_chess_multilingual_support",
+  "spec_version": "2.0.0",
+  "goal": "Make the entire Next.js app fully multilingual with locale-prefixed routing for English, French, Hindi, Sanskrit. All pages must live under the locale segment (/{locale}/...). Root (/) redirects to default locale (/en).",
+  "locales": {
+    "supported": [
+      {
+        "code": "en",
+        "label": "English",
+        "nativeLabel": "English",
+        "direction": "ltr",
+        "script": "Latin"
+      },
+      {
+        "code": "fr",
+        "label": "French",
+        "nativeLabel": "Français",
+        "direction": "ltr",
+        "script": "Latin"
+      },
+      {
+        "code": "hi",
+        "label": "Hindi",
+        "nativeLabel": "हिन्दी",
+        "direction": "ltr",
+        "script": "Devanagari"
+      },
+      {
+        "code": "sa",
+        "label": "Sanskrit",
+        "nativeLabel": "संस्कृतम्",
+        "direction": "ltr",
+        "script": "Devanagari"
+      }
+    ],
+    "default": "en",
+    "routing": {
+      "strategy": "always_prefixed",
+      "prefix_default_locale": true,
+      "examples": [
+        "/en",
+        "/en/play",
+        "/fr/learn",
+        "/hi/games/123/review",
+        "/sa/settings"
+      ]
+    },
+    "locale_detection": {
+      "enabled": true,
+      "priority": ["cookie", "accept_language", "default"],
+      "cookie": {
+        "name": "rg_locale",
+        "max_age_days": 365,
+        "same_site": "lax",
+        "secure_in_production": true,
+        "path": "/"
+      }
+    },
+    "fallback": {
+      "locale": "en",
+      "missing_key_behavior": {
+        "development": "warn_and_fallback",
+        "production": "fallback_silently"
+      }
+    }
+  },
+  "stack": {
+    "framework": "Next.js (App Router)",
+    "language": "TypeScript",
+    "ui": "React + Tailwind (existing)",
+    "i18n_library": {
+      "name": "next-intl",
+      "version": "latest_compatible",
+      "reason": "Modern App Router i18n via server request config + middleware + locale navigation helpers"
+    }
+  },
+  "scope": {
+    "v1": {
+      "includes": [
+        "All UI strings translated (navigation, buttons, toasts, forms, errors, empty states)",
+        "Locale-prefixed routing for every page",
+        "Locale-aware navigation and programmatic routing",
+        "Locale-aware formatting for numbers/dates",
+        "Language switcher with persistence"
+      ],
+      "excludes": [
+        "Translating user-generated content (bios, chat messages)",
+        "Translating chess notation (SAN/PGN) and engine output text if it is already domain-standard",
+        "Auto-translation pipeline (optional future)"
+      ]
+    },
+    "v1_1_optional": {
+      "includes": [
+        "Localize Learn/Tutorial lesson content stored in DB (Supabase) using JSONB fields or translation table"
+      ]
+    }
+  },
+  "high_level_architecture": {
+    "principles": [
+      "All routes are under src/app/[locale]/...",
+      "No user-facing pages under src/app/ without locale prefix",
+      "URL locale is the source of truth; cookie is a preference for root redirects",
+      "Translations are message dictionaries (JSON) loaded per request",
+      "Server Components use server-loaded messages; Client Components use client provider hooks",
+      "Links and router navigation must be locale-aware (no hard-coded '/play' etc.)"
+    ],
+    "routing_flow": [
+      "Request comes in",
+      "Middleware ensures a valid locale prefix; redirects '/' -> '/en' and '/play' -> '/en/play'",
+      "Request config loads correct messages for the locale",
+      "Layout sets <html lang> and provides translations"
+    ]
+  },
+  "repo_changes": {
+    "dependencies_to_add": ["next-intl"],
+    "new_files": [
+      "src/i18n/locales.ts",
+      "src/i18n/routing.ts",
+      "src/i18n/request.ts",
+      "src/i18n/navigation.ts",
+      "src/messages/en.json",
+      "src/messages/fr.json",
+      "src/messages/hi.json",
+      "src/messages/sa.json",
+      "src/middleware.ts",
+      "src/app/[locale]/layout.tsx",
+      "src/app/[locale]/page.tsx",
+      "src/components/i18n/LanguageSwitcher.tsx",
+      "src/components/i18n/LocaleProvider.tsx"
+    ],
+    "files_to_update": [
+      "src/app/layout.tsx (may become minimal or removed if you move all to [locale]/layout.tsx)",
+      "Any component containing hard-coded UI strings",
+      "Any <Link href=\"/...\"> or router.push('/...') usage"
+    ],
+    "disallowed_patterns_after_migration": [
+      "href=\"/play\" (must be locale-aware)",
+      "router.push('/learn') (must be locale-aware)",
+      "Pages in src/app/* outside [locale] that are user-facing"
+    ]
+  },
+  "dictionaries": {
+    "location": "src/messages/{locale}.json",
+    "format": "nested_json",
+    "key_rules": [
+      "Keys must be stable and semantically named (no keys like 'text1')",
+      "No raw user-facing strings in components; everything via t('...')",
+      "Use interpolation params for dynamic text (e.g., {name}, {count})",
+      "Use pluralization where needed"
+    ],
+    "namespaces": [
+      "nav",
+      "common",
+      "auth",
+      "play",
+      "learn",
+      "game",
+      "gameReview",
+      "profile",
+      "settings",
+      "errors",
+      "toasts"
+    ],
+    "initial_seed_keys_minimum": [
+      "nav.home",
+      "nav.play",
+      "nav.learn",
+      "nav.leaderboard",
+      "nav.profile",
+      "nav.settings",
+      "common.save",
+      "common.cancel",
+      "common.close",
+      "common.loading",
+      "auth.signIn",
+      "auth.signOut",
+      "auth.email",
+      "auth.password",
+      "errors.generic",
+      "gameReview.title",
+      "gameReview.analyzing",
+      "gameReview.retry"
+    ]
+  },
+  "locale_aware_formatting": {
+    "numbers": {
+      "use": "Intl.NumberFormat",
+      "examples": ["rating", "accuracy_percent", "move_count"]
+    },
+    "dates": {
+      "use": "Intl.DateTimeFormat",
+      "examples": ["game_created_at", "review_generated_at"]
+    }
+  },
+  "fonts_and_typography": {
+    "goal": "Ensure Devanagari glyph coverage for Hindi/Sanskrit without tofu boxes.",
+    "approach": {
+      "tool": "next/font",
+      "strategy": "Use a Devanagari-capable font for hi/sa locales (or globally if simpler)."
+    },
+    "requirements": [
+      "hi/sa pages must render Devanagari correctly in Header, Buttons, Lesson content, Game Review screens",
+      "No layout break due to longer translations (French often longer)",
+      "Maintain chess piece symbols rendering"
+    ]
+  },
+  "middleware_spec": {
+    "file": "src/middleware.ts",
+    "goals": [
+      "Redirect '/' -> '/en'",
+      "If pathname does not start with '/en'|'/fr'|'/hi'|'/sa', redirect to '/en' + pathname",
+      "Optionally if request is '/', pick locale using cookie/Accept-Language and redirect to '/{locale}'",
+      "Avoid running on _next/static, images, favicon, robots, sitemap, and API routes"
+    ],
+    "matcher_exclusions": [
+      "^/_next/.*",
+      "^/api/.*",
+      "^/favicon\\.ico$",
+      "^/robots\\.txt$",
+      "^/sitemap\\.xml$",
+      "^/assets/.*",
+      "^/images/.*"
+    ],
+    "cookie_behavior": [
+      "If path includes locale, set rg_locale cookie to that locale (so future '/' redirects respect it)",
+      "If user changes locale via switcher, switcher sets cookie and triggers navigation"
+    ]
+  },
+  "app_router_layout_spec": {
+    "file": "src/app/[locale]/layout.tsx",
+    "requirements": [
+      "Validate locale param is supported; otherwise 404 or redirect (prefer 404 inside route and middleware handles redirects)",
+      "Set <html lang={locale}> and optionally dir",
+      "Load messages for locale using next-intl request config",
+      "Wrap children with NextIntlClientProvider",
+      "Apply locale-aware fonts (hi/sa Devanagari font)"
+    ],
+    "metadata": {
+      "translate_page_titles": true,
+      "translate_descriptions": true,
+      "per_locale_canonical": true
+    }
+  },
+  "navigation_spec": {
+    "requirements": [
+      "All Link components must be locale-aware (e.g., create a wrapper around next/link or use next-intl navigation helpers)",
+      "All router.push/replace must preserve locale and/or use locale-aware helpers",
+      "Language switcher must keep current pathname and swap the locale prefix"
+    ],
+    "language_switcher": {
+      "file": "src/components/i18n/LanguageSwitcher.tsx",
+      "ui_requirements": [
+        "Shows current language native label",
+        "Allows switching among en/fr/hi/sa",
+        "Accessible: keyboard navigation + aria-label"
+      ],
+      "behavior_requirements": [
+        "On change: set rg_locale cookie",
+        "Navigate to same route under new locale",
+        "If current route does not exist in target locale (rare), fallback to /{locale}"
+      ],
+      "url_examples": {
+        "from": "/en/games/123/review",
+        "to_fr": "/fr/games/123/review",
+        "to_hi": "/hi/games/123/review",
+        "to_sa": "/sa/games/123/review"
+      }
+    }
+  },
+  "seo": {
+    "seo": {
+      "goals": [
+        "Ensure search engines understand each locale page is a localized variant (not duplicate content).",
+        "Ensure correct indexing and ranking per language.",
+        "Ensure correct social sharing metadata per locale."
+      ],
+      "requirements": [
+        {
+          "id": "SEO-1",
+          "title": "Localized alternates (hreflang) for every indexable page",
+          "details": [
+            "Each indexable page must include link rel='alternate' hreflang='en|fr|hi|sa' pointing to its translated equivalents.",
+            "Include an x-default alternate that points to the default locale landing (e.g., /en).",
+            "Alternates must exist for deep routes (not just home)."
+          ],
+          "implementation_notes": [
+            "Use Next.js App Router generateMetadata to emit alternates where possible.",
+            "Alternatively or additionally, emit hreflang via sitemap."
+          ]
+        },
+        {
+          "id": "SEO-2",
+          "title": "Correct canonical URLs per locale",
+          "details": [
+            "Each locale page should use a self-referencing canonical URL by default (e.g., /fr/learn canonical is /fr/learn).",
+            "Do NOT canonicalize all locales to English unless you intentionally want only English to rank (usually not desired)."
+          ],
+          "implementation_notes": [
+            "Canonicals are a major signal for deduplication/canonicalization; wrong canonicals can collapse locale pages into one."
+          ]
+        },
+        {
+          "id": "SEO-3",
+          "title": "Localized metadata",
+          "details": [
+            "Page <title>, description, and OpenGraph/Twitter fields must be translated per locale.",
+            "Metadata generation must be server-side using App Router metadata APIs."
+          ],
+          "implementation_notes": [
+            "Use generateMetadata per route or per segment to pull translated strings."
+          ]
+        },
+        {
+          "id": "SEO-4",
+          "title": "Locale-aware sitemap + robots",
+          "details": [
+            "Sitemap must include all locale-prefixed URLs.",
+            "If using hreflang in sitemap, include alternate links per URL entry.",
+            "robots.txt must allow crawling of locale pages."
+          ]
+        },
+        {
+          "id": "SEO-5",
+          "title": "HTML lang attribute",
+          "details": ["Set <html lang='{locale}'> per page (layout)."]
+        }
+      ],
+      "source_guidance": [
+        "Google Search Central recommends hreflang for localized versions and provides international/multilingual site guidance.",
+        "Google documentation explains canonicalization and canonical URL signaling.",
+        "Next.js App Router metadata APIs (generateMetadata) are the standard way to generate per-locale head metadata."
+      ]
+    }
+  },
+  "migration_plan": {
+    "strategy": "move_all_routes_under_locale",
+    "steps": [
+      {
+        "id": "M1",
+        "title": "Add next-intl and core i18n files",
+        "actions": [
+          "Install next-intl",
+          "Create src/i18n/* and src/messages/*",
+          "Create middleware and [locale] layout"
+        ],
+        "deliverables": [
+          "Request-based message loading works",
+          "Middleware redirects / -> /en"
+        ]
+      },
+      {
+        "id": "M2",
+        "title": "Move all pages under src/app/[locale]",
+        "actions": [
+          "Create wrappers or move existing routes into src/app/[locale]/...",
+          "Ensure all old routes are removed or not user-facing",
+          "Update imports if needed"
+        ],
+        "deliverables": ["Every page is reachable only under /{locale}/..."]
+      },
+      {
+        "id": "M3",
+        "title": "Replace hard-coded links and strings",
+        "actions": [
+          "Replace all hard-coded hrefs and router navigations with locale-aware helpers",
+          "Replace raw strings in UI with t('...')",
+          "Seed EN dictionary and add FR/HI/SA translations for critical screens"
+        ],
+        "deliverables": [
+          "No hard-coded UI strings in key flows (nav/auth/play/learn/game-review)"
+        ]
+      },
+      {
+        "id": "M4",
+        "title": "Add language switcher + persistence",
+        "actions": [
+          "Add LanguageSwitcher to header and/or settings",
+          "Write cookie + redirect logic",
+          "Verify deep-route switching"
+        ],
+        "deliverables": ["Switching language preserves current page"]
+      },
+      {
+        "id": "M5",
+        "title": "Formatting + fonts + QA",
+        "actions": [
+          "Add locale number/date formatting usage in key screens",
+          "Add Devanagari font support and test on Windows/Mac",
+          "Fix layout issues due to longer translations"
+        ],
+        "deliverables": ["Visual and functional parity across all locales"]
+      }
+    ]
+  },
+  "optional_db_localization_v1_1": {
+    "objective": "Localize lesson/tutorial content stored in Supabase.",
+    "recommended_option": "jsonb_columns",
+    "jsonb_columns": {
+      "tables": [
+        {
+          "table": "learn_tracks",
+          "add_columns": [
+            { "name": "title_i18n", "type": "jsonb", "default": "{}" },
+            { "name": "description_i18n", "type": "jsonb", "default": "{}" }
+          ]
+        },
+        {
+          "table": "learn_lessons",
+          "add_columns": [
+            { "name": "title_i18n", "type": "jsonb", "default": "{}" },
+            { "name": "description_i18n", "type": "jsonb", "default": "{}" }
+          ]
+        },
+        {
+          "table": "learn_lesson_steps",
+          "add_columns": [
+            { "name": "title_i18n", "type": "jsonb", "default": "{}" },
+            { "name": "body_md_i18n", "type": "jsonb", "default": "{}" },
+            { "name": "hints_i18n", "type": "jsonb", "default": "{}" },
+            {
+              "name": "explain_correct_md_i18n",
+              "type": "jsonb",
+              "default": "{}"
+            },
+            {
+              "name": "explain_wrong_md_i18n",
+              "type": "jsonb",
+              "default": "{}"
+            }
+          ]
+        }
+      ],
+      "read_fallback_logic": [
+        "When rendering a field, prefer i18n JSONB value for current locale, else fallback to English base column."
+      ]
+    }
+  },
+  "acceptance_criteria": [
+    "All pages are accessible only under locale prefix: /en, /fr, /hi, /sa.",
+    "Visiting '/' redirects to '/en' (or to cookie-detected locale if enabled).",
+    "Visiting non-prefixed routes (e.g., '/play') redirects to '/en/play'.",
+    "Language switcher swaps locale prefix and keeps the rest of the path intact.",
+    "No hard-coded user-facing strings remain in core flows; all use dictionary keys.",
+    "Hindi and Sanskrit render correctly (Devanagari) with no missing glyph boxes.",
+    "Locale-aware formatting is used for dates/numbers where shown.",
+    "Smoke tests pass for each locale for at least Home, Play, Learn, Game Review, Settings."
+  ],
+  "testing": {
+    "unit_tests": [
+      "Locale validation: supported locales only",
+      "Path rewrite: switching locale preserves pathname correctly",
+      "Middleware redirect: / -> /en, /play -> /en/play"
+    ],
+    "e2e_smoke_tests_playwright": [
+      "Open /en and verify nav label keys render correctly",
+      "Open /fr and verify French nav labels render",
+      "Open /hi and verify Devanagari renders",
+      "Open /sa and verify Devanagari renders",
+      "Deep route switch test: /en/games/123/review -> switch to fr -> /fr/games/123/review",
+      "Non-prefixed route redirect test: /learn -> /en/learn"
+    ],
+    "manual_qa": [
+      "Layout checks for long French strings",
+      "Font rendering on Windows and macOS",
+      "Check chess symbols rendering on all locales"
+    ]
+  },
+  "codegen_instructions": {
+    "must_generate": [
+      "Concrete file implementations for middleware.ts, [locale]/layout.tsx, LanguageSwitcher.tsx",
+      "Locale navigation wrapper utilities",
+      "Initial dictionaries for en/fr/hi/sa with seeded keys",
+      "Refactors to remove hard-coded strings from nav + common components"
+    ],
+    "must_not_do": [
+      "Do not introduce non-locale routes for pages",
+      "Do not leave old non-prefixed links in components",
+      "Do not rely on Next.js legacy pages-router i18n settings"
+    ]
+  },
+  "starter_templates": {
+    "src/i18n/locales.ts": "export const SUPPORTED_LOCALES = ['en','fr','hi','sa'] as const;\nexport type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];\nexport const DEFAULT_LOCALE: SupportedLocale = 'en';\n",
+    "src/messages/en.json": "{\n  \"nav\": { \"home\": \"Home\", \"play\": \"Play\", \"learn\": \"Learn\", \"leaderboard\": \"Leaderboard\", \"profile\": \"Profile\", \"settings\": \"Settings\" },\n  \"common\": { \"save\": \"Save\", \"cancel\": \"Cancel\", \"close\": \"Close\", \"loading\": \"Loading...\" },\n  \"auth\": { \"signIn\": \"Sign in\", \"signOut\": \"Sign out\", \"email\": \"Email\", \"password\": \"Password\" },\n  \"errors\": { \"generic\": \"Something went wrong\" },\n  \"gameReview\": { \"title\": \"Game Review\", \"analyzing\": \"Analyzing...\", \"retry\": \"Retry\" }\n}\n",
+    "src/messages/fr.json": "{\n  \"nav\": { \"home\": \"Accueil\", \"play\": \"Jouer\", \"learn\": \"Apprendre\", \"leaderboard\": \"Classement\", \"profile\": \"Profil\", \"settings\": \"Paramètres\" },\n  \"common\": { \"save\": \"Enregistrer\", \"cancel\": \"Annuler\", \"close\": \"Fermer\", \"loading\": \"Chargement...\" },\n  \"auth\": { \"signIn\": \"Se connecter\", \"signOut\": \"Se déconnecter\", \"email\": \"E-mail\", \"password\": \"Mot de passe\" },\n  \"errors\": { \"generic\": \"Une erreur est survenue\" },\n  \"gameReview\": { \"title\": \"Analyse de la partie\", \"analyzing\": \"Analyse en cours...\", \"retry\": \"Réessayer\" }\n}\n",
+    "src/messages/hi.json": "{\n  \"nav\": { \"home\": \"होम\", \"play\": \"खेलें\", \"learn\": \"सीखें\", \"leaderboard\": \"लीडरबोर्ड\", \"profile\": \"प्रोफ़ाइल\", \"settings\": \"सेटिंग्स\" },\n  \"common\": { \"save\": \"सेव करें\", \"cancel\": \"रद्द करें\", \"close\": \"बंद करें\", \"loading\": \"लोड हो रहा है...\" },\n  \"auth\": { \"signIn\": \"साइन इन\", \"signOut\": \"साइन आउट\", \"email\": \"ईमेल\", \"password\": \"पासवर्ड\" },\n  \"errors\": { \"generic\": \"कुछ गलत हो गया\" },\n  \"gameReview\": { \"title\": \"गेम रिव्यू\", \"analyzing\": \"विश्लेषण हो रहा है...\", \"retry\": \"फिर से कोशिश करें\" }\n}\n",
+    "src/messages/sa.json": "{\n  \"nav\": { \"home\": \"गृहम्\", \"play\": \"क्रीडतु\", \"learn\": \"अध्ययनम्\", \"leaderboard\": \"अग्रक्रमः\", \"profile\": \"परिचयः\", \"settings\": \"व्यवस्थाः\" },\n  \"common\": { \"save\": \"रक्षतु\", \"cancel\": \"निरस्यतु\", \"close\": \"पिधातु\", \"loading\": \"आरोहति...\" },\n  \"auth\": { \"signIn\": \"प्रवेशः\", \"signOut\": \"निर्गमनम्\", \"email\": \"ईमेल\", \"password\": \"गुप्तशब्दः\" },\n  \"errors\": { \"generic\": \"किञ्चित् दोषः जातः\" },\n  \"gameReview\": { \"title\": \"क्रीडाविमर्शः\", \"analyzing\": \"विश्लेषणं क्रियते...\", \"retry\": \"पुनः प्रयतस्व\" }\n}\n"
+  }
+}

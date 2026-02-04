@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Link, usePathname } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -29,28 +29,30 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
-const publicNavItems = [
-  { href: '/play', label: 'Play', icon: Gamepad2 },
-  { href: '/learn', label: 'Learn', icon: GraduationCap },
-  { href: '/chess-guides', label: 'Guides', icon: BookOpen },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+const publicNavKeys = [
+  { href: '/play' as const, labelKey: 'play', icon: Gamepad2 },
+  { href: '/learn' as const, labelKey: 'learn', icon: GraduationCap },
+  { href: '/chess-guides' as const, labelKey: 'guides', icon: BookOpen },
+  { href: '/leaderboard' as const, labelKey: 'leaderboard', icon: Trophy },
 ];
 
-const authNavItems = [
-  { href: '/play', label: 'Play', icon: Gamepad2 },
-  { href: '/learn', label: 'Learn', icon: GraduationCap },
-  { href: '/chess-guides', label: 'Guides', icon: BookOpen },
-  { href: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-  { href: '/archive', label: 'Archive', icon: Archive },
+const authNavKeys = [
+  { href: '/play' as const, labelKey: 'play', icon: Gamepad2 },
+  { href: '/learn' as const, labelKey: 'learn', icon: GraduationCap },
+  { href: '/chess-guides' as const, labelKey: 'guides', icon: BookOpen },
+  { href: '/leaderboard' as const, labelKey: 'leaderboard', icon: Trophy },
+  { href: '/archive' as const, labelKey: 'archive', icon: Archive },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   const { user, profile, isAuthenticated, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const t = useTranslations('nav');
 
-  const navItems = isAuthenticated ? authNavItems : publicNavItems;
+  const navItems = isAuthenticated ? authNavKeys : publicNavKeys;
 
   const userMeta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const userMetaPicture = typeof userMeta.picture === 'string' ? userMeta.picture : undefined;
@@ -81,7 +83,7 @@ export function Navbar() {
               >
                 <span className="flex items-center gap-2">
                   <item.icon className="h-4 w-4" />
-                  {item.label}
+                  {t(item.labelKey)}
                 </span>
                 {pathname === item.href && (
                   <motion.div
@@ -95,6 +97,8 @@ export function Navbar() {
 
           {/* User Menu */}
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -131,13 +135,13 @@ export function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href={profile?.username ? `/u/${profile.username}` : '/settings/profile'}>
                       <User className="mr-2 h-4 w-4" />
-                      Profile
+                      {t('profile')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/settings">
                       <Settings className="mr-2 h-4 w-4" />
-                      Settings
+                      {t('settings')}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -149,17 +153,17 @@ export function Navbar() {
                     className="cursor-pointer"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    {t('signOut')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <div className="hidden sm:flex items-center gap-2">
                 <Button variant="ghost" asChild>
-                  <Link href="/login">Sign In</Link>
+                  <Link href="/login">{t('signIn')}</Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/login?signup=true">Sign Up</Link>
+                  <Link href="/login?signup=true">{t('signUp')}</Link>
                 </Button>
               </div>
             )}
@@ -203,7 +207,7 @@ export function Navbar() {
                 )}
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             ))}
             {!isAuthenticated && (
@@ -214,14 +218,14 @@ export function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted"
                 >
-                  Sign In
+                  {t('signIn')}
                 </Link>
                 <Link
                   href="/login?signup=true"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium bg-primary text-primary-foreground"
                 >
-                  Sign Up
+                  {t('signUp')}
                 </Link>
               </>
             )}
@@ -231,4 +235,3 @@ export function Navbar() {
     </nav>
   );
 }
-

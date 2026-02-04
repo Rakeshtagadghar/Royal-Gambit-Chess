@@ -342,3 +342,14 @@
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(0, 0, 0, 0.05);
 }
+
+/* Devanagari font support for Hindi and Sanskrit locales */
+:root[lang="hi"],
+:root[lang="sa"] {
+  --font-sans: var(--font-devanagari), var(--font-geist-sans);
+}
+
+:root[lang="hi"] body,
+:root[lang="sa"] body {
+  font-family: var(--font-devanagari), var(--font-geist-sans), system-ui, sans-serif;
+}

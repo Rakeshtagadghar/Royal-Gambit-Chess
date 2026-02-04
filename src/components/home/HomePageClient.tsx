@@ -1,7 +1,8 @@
 'use client';
 
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
-import Link from 'next/link';
+import { Link } from "@/i18n/navigation";
+import { SITE_CONFIG } from "@/lib/config";
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,90 +31,91 @@ import {
 } from 'lucide-react';
 import { Footer } from '@/components/layout/Footer';
 import { useRef, useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 const playFeatures = [
   {
     icon: Bot,
-    title: 'Play vs Bot',
-    description: 'Challenge Stockfish with 5 difficulty levels, from beginner to expert.',
+    titleKey: 'playVsBot',
+    descriptionKey: 'playVsBotDesc',
   },
   {
     icon: Users,
-    title: 'Play vs Friends',
-    description: 'Create a game and share the link. Real-time moves with low latency.',
+    titleKey: 'playVsFriends',
+    descriptionKey: 'playVsFriendsDesc',
   },
   {
     icon: Trophy,
-    title: 'Matchmaking',
-    description: 'Find opponents automatically. Queue by time control preference.',
+    titleKey: 'matchmaking',
+    descriptionKey: 'matchmakingDesc',
   },
 ];
 
 const learnFeatures = [
   {
     icon: GraduationCap,
-    title: 'Interactive Lessons',
-    description: 'Step-by-step lessons from basics to advanced strategy with guided practice.',
+    titleKey: 'interactiveLessons',
+    descriptionKey: 'interactiveLessonsDesc',
   },
   {
     icon: Puzzle,
-    title: 'Practice Puzzles',
-    description: 'Sharpen your tactics with curated puzzle packs. Track your accuracy.',
+    titleKey: 'practicePuzzles',
+    descriptionKey: 'practicePuzzlesDesc',
   },
   {
     icon: Award,
-    title: 'Achievements',
-    description: 'Earn badges as you progress. Track streaks and unlock rewards.',
+    titleKey: 'achievements',
+    descriptionKey: 'achievementsDesc',
   },
 ];
 
 const platformFeatures = [
   {
     icon: Clock,
-    title: 'Time Controls',
-    description: 'Bullet, Blitz, Rapid, and Classical. All with optional increment.',
+    titleKey: 'timeControls',
+    descriptionKey: 'timeControlsDesc',
   },
   {
     icon: Shield,
-    title: 'Secure & Fair',
-    description: 'Server-validated moves. No client-side cheating possible.',
+    titleKey: 'secureFair',
+    descriptionKey: 'secureFairDesc',
   },
   {
     icon: Zap,
-    title: 'Lightning Fast',
-    description: 'Optimized for speed. Smooth animations and instant feedback.',
+    titleKey: 'lightningFast',
+    descriptionKey: 'lightningFastDesc',
   },
 ];
 
 const learningTracks = [
   {
-    level: 'Beginner',
-    title: 'Chess Basics',
-    description: 'Learn piece movement, rules, and fundamental concepts',
+    levelKey: 'beginner',
+    titleKey: 'chessBasicsTitle',
+    descriptionKey: 'chessBasicsDesc',
     color: 'from-emerald-500 to-teal-500',
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-700',
   },
   {
-    level: 'Intermediate',
-    title: 'Tactics & Patterns',
-    description: 'Master forks, pins, skewers, and common tactical motifs',
+    levelKey: 'intermediate',
+    titleKey: 'tacticsPatterns',
+    descriptionKey: 'tacticsPatternsDesc',
     color: 'from-sky-500 to-blue-500',
     bgColor: 'bg-sky-50',
     textColor: 'text-sky-700',
   },
   {
-    level: 'Advanced',
-    title: 'Strategy & Planning',
-    description: 'Develop positional understanding and long-term planning',
+    levelKey: 'advanced',
+    titleKey: 'strategyPlanning',
+    descriptionKey: 'strategyPlanningDesc',
     color: 'from-amber-500 to-orange-500',
     bgColor: 'bg-amber-50',
     textColor: 'text-amber-700',
   },
   {
-    level: 'Expert',
-    title: 'Master Techniques',
-    description: 'Advanced endgames, complex calculations, and deep analysis',
+    levelKey: 'expert',
+    titleKey: 'masterTechniques',
+    descriptionKey: 'masterTechniquesDesc',
     color: 'from-rose-500 to-red-500',
     bgColor: 'bg-rose-50',
     textColor: 'text-rose-700',
@@ -121,82 +123,82 @@ const learningTracks = [
 ];
 
 const sampleAchievements = [
-  { icon: Target, title: 'First Steps', description: 'Complete your first lesson', color: 'text-emerald-500' },
-  { icon: Zap, title: 'On Fire', description: 'Maintain a 7-day streak', color: 'text-orange-500' },
-  { icon: Puzzle, title: 'Puzzle Master', description: 'Solve 100 puzzles', color: 'text-sky-500' },
-  { icon: Crown, title: 'Track Champion', description: 'Complete an entire track', color: 'text-amber-500' },
+  { icon: Target, titleKey: 'firstSteps', descriptionKey: 'firstStepsDesc', color: 'text-emerald-500' },
+  { icon: Zap, titleKey: 'onFire', descriptionKey: 'onFireDesc', color: 'text-orange-500' },
+  { icon: Puzzle, titleKey: 'puzzleMaster', descriptionKey: 'puzzleMasterDesc', color: 'text-sky-500' },
+  { icon: Crown, titleKey: 'trackChampion', descriptionKey: 'trackChampionDesc', color: 'text-amber-500' },
 ];
 
 const chessGuides = [
   {
-    title: 'Chess Basics',
-    description: 'Learn how each piece moves, special rules like castling, and basic checkmate patterns.',
+    titleKey: 'chessBasicsTitle',
+    descriptionKey: 'chessBasicsGuideDesc',
     href: '/learn/chess-basics',
     icon: Crown,
-    level: 'Beginner',
+    levelKey: 'beginner',
     levelColor: 'bg-emerald-500',
   },
   {
-    title: 'Opening Principles',
-    description: 'Master center control, piece development, and king safety to start every game strong.',
+    titleKey: 'openingPrinciples',
+    descriptionKey: 'openingPrinciplesDesc',
     href: '/learn/opening-principles',
     icon: Swords,
-    level: 'Intermediate',
+    levelKey: 'intermediate',
     levelColor: 'bg-sky-500',
   },
   {
-    title: 'Essential Endgames',
-    description: 'Learn critical endgame techniques to convert advantages into wins.',
+    titleKey: 'essentialEndgames',
+    descriptionKey: 'essentialEndgamesDesc',
     href: '/learn/essential-endgames',
     icon: Flag,
-    level: 'Intermediate',
+    levelKey: 'intermediate',
     levelColor: 'bg-sky-500',
   },
   {
-    title: 'Strategic Thinking',
-    description: 'Develop positional understanding, planning skills, and prophylactic thinking.',
+    titleKey: 'strategicThinking',
+    descriptionKey: 'strategicThinkingDesc',
     href: '/learn/strategic-thinking',
     icon: Brain,
-    level: 'Advanced',
+    levelKey: 'advanced',
     levelColor: 'bg-amber-500',
   },
 ];
 
 const homeFaqs = [
   {
-    question: 'Is Royal Gambit Chess free to use?',
-    answer: 'Yes, the learning content and play features are available to get started without payment. All our chess guides are freely accessible, and you can play against our AI without an account.',
+    questionKey: 'faqQuestion1',
+    answerKey: 'faqAnswer1',
   },
   {
-    question: 'Do I need an account to read the guides?',
-    answer: 'No. All guide pages are public and accessible without signing in. An account is only needed to track your learning progress, maintain streaks, and play rated games against other players.',
+    questionKey: 'faqQuestion2',
+    answerKey: 'faqAnswer2',
   },
   {
-    question: 'What level is this for?',
-    answer: 'Royal Gambit serves players from complete beginner to advanced. Our structured learning tracks start with the very basics and progress through opening principles, endgame technique, and strategic thinking.',
+    questionKey: 'faqQuestion3',
+    answerKey: 'faqAnswer3',
   },
 ];
 
 const whyRoyalGambit = [
   {
     icon: BookOpen,
-    title: 'Comprehensive Learning',
-    description: 'Structured learning tracks take you from beginner to advanced with interactive lessons and clear explanations.',
+    titleKey: 'comprehensiveLearning',
+    descriptionKey: 'comprehensiveLearningDesc',
   },
   {
     icon: Target,
-    title: 'Focused Practice',
-    description: 'Themed puzzle packs let you practice specific tactics like pins, forks, and checkmate patterns.',
+    titleKey: 'focusedPractice',
+    descriptionKey: 'focusedPracticeDesc',
   },
   {
     icon: Bot,
-    title: 'Adjustable AI',
-    description: 'Play against Stockfish at 5 difficulty levels—from beginner-friendly to grandmaster strength.',
+    titleKey: 'adjustableAI',
+    descriptionKey: 'adjustableAIDesc',
   },
   {
     icon: Shield,
-    title: 'Fair Play',
-    description: 'All moves are server-validated. No client-side cheating is possible, ensuring fair games.',
+    titleKey: 'fairPlay',
+    descriptionKey: 'fairPlayDesc',
   },
 ];
 
@@ -253,7 +255,7 @@ function ChessPiece({ type, className }: { type: 'king' | 'queen' | 'rook' | 'bi
     knight: 'M19 22H5v-2h14v2zM13 2c-1.25 0-2.42.62-3.11 1.66L7 8l2 2-2.5 2.5L9 15l3-3 1 1c.33.33.67.67 1.09.91.12.07.24.13.37.19.12.05.25.1.38.13.13.03.26.05.39.06.07.01.13.01.2.01h.07c1.38 0 2.5-1.12 2.5-2.5V5c0-1.66-1.34-3-3-3z',
     pawn: 'M12 4c-1.66 0-3 1.34-3 3 0 1.3.84 2.4 2 2.82V12H9v2h2v4H6v2h12v-2h-5v-4h2v-2h-2V9.82c1.16-.42 2-1.52 2-2.82 0-1.66-1.34-3-3-3z',
   };
-  
+
   return (
     <svg viewBox="0 0 24 24" className={className} fill="currentColor">
       <path d={pieces[type]} />
@@ -268,7 +270,7 @@ function FloatingPieces() {
       {/* King - top left */}
       <motion.div
         className="absolute top-[15%] left-[8%] text-foreground/[0.04]"
-        animate={{ 
+        animate={{
           y: [0, -15, 0],
           rotate: [0, 5, 0],
         }}
@@ -276,11 +278,11 @@ function FloatingPieces() {
       >
         <ChessPiece type="king" className="w-24 h-24 md:w-32 md:h-32" />
       </motion.div>
-      
+
       {/* Queen - top right */}
       <motion.div
         className="absolute top-[20%] right-[10%] text-foreground/[0.03]"
-        animate={{ 
+        animate={{
           y: [0, 20, 0],
           rotate: [0, -8, 0],
         }}
@@ -288,11 +290,11 @@ function FloatingPieces() {
       >
         <ChessPiece type="queen" className="w-20 h-20 md:w-28 md:h-28" />
       </motion.div>
-      
+
       {/* Knight - middle left */}
       <motion.div
         className="absolute top-[45%] left-[5%] text-foreground/[0.04]"
-        animate={{ 
+        animate={{
           y: [0, 12, 0],
           x: [0, 8, 0],
         }}
@@ -300,22 +302,22 @@ function FloatingPieces() {
       >
         <ChessPiece type="knight" className="w-16 h-16 md:w-24 md:h-24" />
       </motion.div>
-      
+
       {/* Rook - middle right */}
       <motion.div
         className="absolute top-[50%] right-[6%] text-foreground/[0.03]"
-        animate={{ 
+        animate={{
           y: [0, -18, 0],
         }}
         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
       >
         <ChessPiece type="rook" className="w-14 h-14 md:w-20 md:h-20" />
       </motion.div>
-      
+
       {/* Bishop - bottom left */}
       <motion.div
         className="absolute bottom-[25%] left-[12%] text-foreground/[0.03]"
-        animate={{ 
+        animate={{
           y: [0, 15, 0],
           rotate: [0, -5, 0],
         }}
@@ -323,11 +325,11 @@ function FloatingPieces() {
       >
         <ChessPiece type="bishop" className="w-16 h-16 md:w-22 md:h-22" />
       </motion.div>
-      
+
       {/* Pawn - bottom right */}
       <motion.div
         className="absolute bottom-[30%] right-[15%] text-foreground/[0.04]"
-        animate={{ 
+        animate={{
           y: [0, -10, 0],
         }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
@@ -357,6 +359,7 @@ function ChessBoardPattern({ className }: { className?: string }) {
 
 // Interactive mini chess board for hero section
 function InteractiveChessBoard() {
+  const t = useTranslations('home');
   const [hoveredSquare, setHoveredSquare] = useState<string | null>(null);
   const [selectedPiece, setSelectedPiece] = useState<string | null>(null);
   const [pieces, setPieces] = useState<Record<string, { type: string; color: 'w' | 'b' }>>({
@@ -436,7 +439,7 @@ function InteractiveChessBoard() {
       <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-primary/20 border border-primary/10 bg-card/50 backdrop-blur-sm p-3">
         {/* Glow effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 pointer-events-none" />
-        
+
         <div className="grid grid-cols-8 gap-0 relative">
           {ranks.map((rank) =>
             files.map((file) => {
@@ -470,15 +473,14 @@ function InteractiveChessBoard() {
                         animate={{ scale: 1, rotate: 0 }}
                         exit={{ scale: 0, rotate: 180 }}
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className={`text-2xl md:text-3xl select-none ${
-                          piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-gray-900 drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]'
-                        } ${isSelected ? 'animate-pulse' : ''}`}
+                        className={`text-2xl md:text-3xl select-none ${piece.color === 'w' ? 'text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]' : 'text-gray-900 drop-shadow-[0_1px_1px_rgba(255,255,255,0.3)]'
+                          } ${isSelected ? 'animate-pulse' : ''}`}
                       >
                         {getPieceSymbol(piece.type, piece.color)}
                       </motion.span>
                     )}
                   </AnimatePresence>
-                  
+
                   {/* Highlight dot for empty hovered squares when piece selected */}
                   {selectedPiece && !piece && isHovered && (
                     <motion.div
@@ -492,7 +494,7 @@ function InteractiveChessBoard() {
             })
           )}
         </div>
-        
+
         {/* Interactive hint */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -501,7 +503,7 @@ function InteractiveChessBoard() {
           className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap"
         >
           <MousePointerClick className="w-3 h-3" />
-          Click to move pieces
+          {t('clickToMove')}
         </motion.div>
       </div>
     </motion.div>
@@ -533,11 +535,11 @@ function AnimatedStat({ value, label, suffix = '' }: { value: number; label: str
 
   useEffect(() => {
     if (!isVisible) return;
-    
+
     let start = 0;
     const duration = 2000;
     const increment = value / (duration / 16);
-    
+
     const timer = setInterval(() => {
       start += increment;
       if (start >= value) {
@@ -547,7 +549,7 @@ function AnimatedStat({ value, label, suffix = '' }: { value: number; label: str
         setCount(Math.floor(start));
       }
     }, 16);
-    
+
     return () => clearInterval(timer);
   }, [isVisible, value]);
 
@@ -592,9 +594,14 @@ function LiveActivityPulse() {
           />
         ))}
       </div>
-      <span className="text-sm text-emerald-600 font-medium">Live games in progress</span>
+      <span className="text-sm text-emerald-600 font-medium"><TranslatedLiveGames /></span>
     </div>
   );
+}
+
+function TranslatedLiveGames() {
+  const t = useTranslations('home');
+  return <>{t('liveGames')}</>;
 }
 
 // Custom cursor follower for landing page - elegant and minimal
@@ -606,7 +613,7 @@ function CustomCursor() {
 
   useEffect(() => {
     setIsMounted(true);
-    
+
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
@@ -645,8 +652,8 @@ function CustomCursor() {
       <motion.div
         className="fixed top-0 left-0 w-8 h-8 rounded-full pointer-events-none z-[9999] hidden lg:flex items-center justify-center"
         style={{
-          background: isHovering 
-            ? 'radial-gradient(circle, hsl(var(--primary) / 0.3) 0%, transparent 70%)' 
+          background: isHovering
+            ? 'radial-gradient(circle, hsl(var(--primary) / 0.3) 0%, transparent 70%)'
             : 'radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 70%)',
         }}
         animate={{
@@ -661,7 +668,7 @@ function CustomCursor() {
           mass: 0.5,
         }}
       />
-      
+
       {/* Inner dot */}
       <motion.div
         className="fixed top-0 left-0 w-2 h-2 bg-primary rounded-full pointer-events-none z-[9999] hidden lg:block"
@@ -701,7 +708,7 @@ function AnimatedGridBackground() {
         </defs>
         <rect width="100%" height="100%" fill="url(#grid)" mask="url(#grid-mask)" />
       </svg>
-      
+
       {/* Animated scan line */}
       <motion.div
         className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent"
@@ -838,12 +845,13 @@ function InteractiveGlowOrb() {
 }
 
 export function HomePageClient() {
+  const t = useTranslations('home');
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ["start start", "end start"],
   });
-  
+
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.5], [1, 0.95]);
   const heroY = useTransform(scrollYProgress, [0, 0.5], [0, 50]);
@@ -853,9 +861,9 @@ export function HomePageClient() {
     <div className="min-h-screen flex flex-col bg-background lg:cursor-none">
       {/* Custom cursor - only on desktop */}
       <CustomCursor />
-      
+
       <Navbar />
-      
+
       {/* Hero Section */}
       <section ref={heroRef} className="relative flex-1 flex items-center justify-center overflow-hidden min-h-[100vh]">
         {/* Animated grid background */}
@@ -868,7 +876,7 @@ export function HomePageClient() {
         <FloatingParticles />
 
         {/* Background Image Layer */}
-        <motion.div 
+        <motion.div
           className="absolute inset-0 z-0"
           style={{ y: imageParallax }}
         >
@@ -890,26 +898,26 @@ export function HomePageClient() {
 
         {/* Morphing gradient blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <MorphingBlob 
-            className="top-10 left-10 w-80 h-80" 
-            color="bg-primary/10" 
+          <MorphingBlob
+            className="top-10 left-10 w-80 h-80"
+            color="bg-primary/10"
           />
-          <MorphingBlob 
-            className="bottom-20 right-10 w-96 h-96" 
-            color="bg-accent/8" 
+          <MorphingBlob
+            className="bottom-20 right-10 w-96 h-96"
+            color="bg-accent/8"
           />
-          <MorphingBlob 
-            className="top-1/3 right-1/4 w-64 h-64" 
-            color="bg-emerald-500/5" 
+          <MorphingBlob
+            className="top-1/3 right-1/4 w-64 h-64"
+            color="bg-emerald-500/5"
           />
-          
+
           {/* Center radial gradient */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[1000px]">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 rounded-full blur-3xl" />
           </div>
 
           {/* Subtle noise texture overlay */}
-          <div 
+          <div
             className="absolute inset-0 opacity-[0.015]"
             style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
@@ -917,7 +925,7 @@ export function HomePageClient() {
           />
         </div>
 
-        <motion.div 
+        <motion.div
           style={{ opacity: heroOpacity, scale: heroScale, y: heroY }}
           className="container mx-auto px-4 py-12 md:py-20 relative z-10"
         >
@@ -937,16 +945,16 @@ export function HomePageClient() {
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 border border-primary/20 backdrop-blur-sm"
                   >
                     <Sparkles className="w-4 h-4" />
-                    Free to play and learn
+                    {t('badge')}
                   </motion.div>
-                  
+
                   <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight">
                     <span className="bg-gradient-to-r from-foreground via-foreground/90 to-foreground bg-clip-text">Royal</span>
                     <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent">Gambit</span>
                   </h1>
                   <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed text-balance">
-                    Play, Learn, and Master Chess.
-                    Interactive lessons, tactical puzzles, and competitive play.
+                    {t('tagline')}
+                    {' '}{t('subtitle')}
                   </p>
 
                   <motion.div
@@ -958,13 +966,13 @@ export function HomePageClient() {
                     <Button asChild size="lg" className="text-lg px-8 h-14 rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 transition-all duration-300 group">
                       <Link href="/play">
                         <Play className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                        Play Now
+                        {t('playNow')}
                         <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                       </Link>
                     </Button>
                     <Button asChild variant="outline" size="lg" className="text-lg px-8 h-14 rounded-xl border-2 hover:bg-secondary backdrop-blur-sm transition-all duration-300">
                       <Link href="/login">
-                        Sign In
+                        {t('signIn')}
                       </Link>
                     </Button>
                   </motion.div>
@@ -994,9 +1002,9 @@ export function HomePageClient() {
               transition={{ delay: 0.8, duration: 0.6 }}
               className="mt-16 md:mt-24 grid grid-cols-3 gap-8 max-w-2xl mx-auto"
             >
-              <AnimatedStat value={50000} label="Games Played" suffix="+" />
-              <AnimatedStat value={500} label="Active Players" suffix="+" />
-              <AnimatedStat value={100} label="Chess Puzzles" suffix="+" />
+              <AnimatedStat value={50000} label={t('gamesPlayed')} suffix="+" />
+              <AnimatedStat value={500} label={t('activePlayers')} suffix="+" />
+              <AnimatedStat value={100} label={t('chessPuzzles')} suffix="+" />
             </motion.div>
 
             {/* Animated chess pieces row */}
@@ -1017,8 +1025,8 @@ export function HomePageClient() {
                     delay: 0.7 + i * 0.08,
                     ease: "easeOut",
                   }}
-                  whileHover={{ 
-                    y: -8, 
+                  whileHover={{
+                    y: -8,
                     scale: 1.15,
                     transition: { duration: 0.2 }
                   }}
@@ -1031,7 +1039,7 @@ export function HomePageClient() {
         </motion.div>
 
         {/* Scroll indicator */}
-        <motion.div 
+        <motion.div
           className="absolute bottom-8 left-1/2 -translate-x-1/2"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1058,7 +1066,7 @@ export function HomePageClient() {
             className="object-cover opacity-10"
           />
         </div>
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial="hidden"
@@ -1068,14 +1076,14 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              The Art of Chess
+              {t('artOfChess')}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Experience chess like never before with stunning visuals and intuitive gameplay.
+              {t('artOfChessDesc')}
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"
             initial="hidden"
             whileInView="visible"
@@ -1092,12 +1100,12 @@ export function HomePageClient() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white">
-                  <h3 className="text-2xl font-bold mb-2">Master the Game</h3>
-                  <p className="text-white/80 text-sm">Learn strategies from the masters</p>
+                  <h3 className="text-2xl font-bold mb-2">{t('masterTheGame')}</h3>
+                  <p className="text-white/80 text-sm">{t('masterTheGameDesc')}</p>
                 </div>
               </div>
             </motion.div>
-            
+
             <motion.div variants={cardVariants} className="relative group">
               <div className="relative h-80 rounded-3xl overflow-hidden shadow-2xl shadow-black/10">
                 <Image
@@ -1108,8 +1116,8 @@ export function HomePageClient() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 text-white">
-                  <h3 className="text-2xl font-bold mb-2">Immersive Experience</h3>
-                  <p className="text-white/80 text-sm">Beautiful, thoughtful design at every move</p>
+                  <h3 className="text-2xl font-bold mb-2">{t('immersiveExperience')}</h3>
+                  <p className="text-white/80 text-sm">{t('immersiveExperienceDesc')}</p>
                 </div>
               </div>
             </motion.div>
@@ -1120,7 +1128,7 @@ export function HomePageClient() {
       {/* Features Section */}
       <section className="py-24 bg-secondary/50 relative">
         <ChessBoardPattern className="opacity-30" />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial="hidden"
@@ -1130,24 +1138,24 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              Everything You Need to Play
+              {t('everythingYouNeed')}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              A complete chess experience, completely free.
+              {t('everythingYouNeedDesc')}
             </p>
           </motion.div>
 
           {/* Play Features */}
           <div className="mb-16">
-            <motion.h3 
+            <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               className="text-sm font-semibold mb-6 text-center text-primary uppercase tracking-wider"
             >
-              Play
+              {t('sectionPlay')}
             </motion.h3>
-            <motion.div 
+            <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-6"
               initial="hidden"
               whileInView="visible"
@@ -1156,7 +1164,7 @@ export function HomePageClient() {
             >
               {playFeatures.map((feature) => (
                 <motion.div
-                  key={feature.title}
+                  key={feature.titleKey}
                   variants={cardVariants}
                 >
                   <Card className="h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 bg-card/80 backdrop-blur-sm group hover:-translate-y-1">
@@ -1164,8 +1172,8 @@ export function HomePageClient() {
                       <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
                         <feature.icon className="h-7 w-7 text-primary" />
                       </div>
-                      <CardTitle className="text-xl">{feature.title}</CardTitle>
-                      <CardDescription className="text-base">{feature.description}</CardDescription>
+                      <CardTitle className="text-xl">{t(feature.titleKey)}</CardTitle>
+                      <CardDescription className="text-base">{t(feature.descriptionKey)}</CardDescription>
                     </CardHeader>
                   </Card>
                 </motion.div>
@@ -1175,15 +1183,15 @@ export function HomePageClient() {
 
           {/* Learn Features */}
           <div className="mb-16">
-            <motion.h3 
+            <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               className="text-sm font-semibold mb-6 text-center text-accent uppercase tracking-wider"
             >
-              Learn & Improve
+              {t('sectionLearnImprove')}
             </motion.h3>
-            <motion.div 
+            <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-6"
               initial="hidden"
               whileInView="visible"
@@ -1192,7 +1200,7 @@ export function HomePageClient() {
             >
               {learnFeatures.map((feature) => (
                 <motion.div
-                  key={feature.title}
+                  key={feature.titleKey}
                   variants={cardVariants}
                 >
                   <Card className="h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:shadow-accent/10 transition-all duration-500 bg-card/80 backdrop-blur-sm group hover:-translate-y-1">
@@ -1200,8 +1208,8 @@ export function HomePageClient() {
                       <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 group-hover:scale-110 transition-all duration-300">
                         <feature.icon className="h-7 w-7 text-accent" />
                       </div>
-                      <CardTitle className="text-xl">{feature.title}</CardTitle>
-                      <CardDescription className="text-base">{feature.description}</CardDescription>
+                      <CardTitle className="text-xl">{t(feature.titleKey)}</CardTitle>
+                      <CardDescription className="text-base">{t(feature.descriptionKey)}</CardDescription>
                     </CardHeader>
                   </Card>
                 </motion.div>
@@ -1211,15 +1219,15 @@ export function HomePageClient() {
 
           {/* Platform Features */}
           <div>
-            <motion.h3 
+            <motion.h3
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
               className="text-sm font-semibold mb-6 text-center text-muted-foreground uppercase tracking-wider"
             >
-              Platform
+              {t('sectionPlatform')}
             </motion.h3>
-            <motion.div 
+            <motion.div
               className="grid grid-cols-1 md:grid-cols-3 gap-6"
               initial="hidden"
               whileInView="visible"
@@ -1228,7 +1236,7 @@ export function HomePageClient() {
             >
               {platformFeatures.map((feature) => (
                 <motion.div
-                  key={feature.title}
+                  key={feature.titleKey}
                   variants={cardVariants}
                 >
                   <Card className="h-full border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-500 bg-card/80 backdrop-blur-sm group hover:-translate-y-1">
@@ -1236,8 +1244,8 @@ export function HomePageClient() {
                       <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center group-hover:bg-muted/80 group-hover:scale-110 transition-all duration-300">
                         <feature.icon className="h-7 w-7 text-muted-foreground" />
                       </div>
-                      <CardTitle className="text-xl">{feature.title}</CardTitle>
-                      <CardDescription className="text-base">{feature.description}</CardDescription>
+                      <CardTitle className="text-xl">{t(feature.titleKey)}</CardTitle>
+                      <CardDescription className="text-base">{t(feature.descriptionKey)}</CardDescription>
                     </CardHeader>
                   </Card>
                 </motion.div>
@@ -1250,7 +1258,7 @@ export function HomePageClient() {
       {/* Learning Tracks Preview Section */}
       <section className="py-24 relative">
         <FloatingPieces />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial="hidden"
@@ -1260,14 +1268,14 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              Structured Learning Paths
+              {t('structuredPaths')}
             </h2>
             <p className="text-muted-foreground text-lg">
-              From beginner to expert, progress at your own pace.
+              {t('structuredPathsDesc')}
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
             initial="hidden"
             whileInView="visible"
@@ -1276,7 +1284,7 @@ export function HomePageClient() {
           >
             {learningTracks.map((track) => (
               <motion.div
-                key={track.level}
+                key={track.titleKey}
                 variants={cardVariants}
               >
                 <Card className="h-full overflow-hidden border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-500 group hover:-translate-y-2">
@@ -1284,11 +1292,11 @@ export function HomePageClient() {
                   <CardHeader className="pt-6">
                     <div className="flex items-center gap-2 mb-3">
                       <span className={`text-xs font-bold px-3 py-1.5 rounded-full bg-gradient-to-r ${track.color} text-white shadow-sm`}>
-                        {track.level}
+                        {t(track.levelKey)}
                       </span>
                     </div>
-                    <CardTitle className="text-lg group-hover:text-primary transition-colors">{track.title}</CardTitle>
-                    <CardDescription className="text-sm">{track.description}</CardDescription>
+                    <CardTitle className="text-lg group-hover:text-primary transition-colors">{t(track.titleKey)}</CardTitle>
+                    <CardDescription className="text-sm">{t(track.descriptionKey)}</CardDescription>
                   </CardHeader>
                 </Card>
               </motion.div>
@@ -1300,7 +1308,7 @@ export function HomePageClient() {
       {/* Achievements Preview Section */}
       <section className="py-24 bg-secondary/50 relative">
         <ChessBoardPattern className="opacity-20" />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial="hidden"
@@ -1310,14 +1318,14 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              Earn Achievements
+              {t('earnAchievements')}
             </h2>
             <p className="text-muted-foreground text-lg">
-              Track your progress and unlock badges as you improve.
+              {t('earnAchievementsDesc')}
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto"
             initial="hidden"
             whileInView="visible"
@@ -1326,7 +1334,7 @@ export function HomePageClient() {
           >
             {sampleAchievements.map((achievement) => (
               <motion.div
-                key={achievement.title}
+                key={achievement.titleKey}
                 variants={cardVariants}
               >
                 <Card className="h-full text-center border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 group">
@@ -1334,8 +1342,8 @@ export function HomePageClient() {
                     <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-muted flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
                       <achievement.icon className={`w-8 h-8 ${achievement.color}`} />
                     </div>
-                    <h3 className="font-semibold text-sm mb-1">{achievement.title}</h3>
-                    <p className="text-xs text-muted-foreground">{achievement.description}</p>
+                    <h3 className="font-semibold text-sm mb-1">{t(achievement.titleKey)}</h3>
+                    <p className="text-xs text-muted-foreground">{t(achievement.descriptionKey)}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1355,16 +1363,14 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              Learn Chess Online — Step by Step
+              {t('learnOnline')}
             </h2>
             <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-              RoyalGambit provides a structured path to chess improvement. Whether you&apos;re learning
-              how the pieces move or refining your strategic thinking, our free guides and interactive
-              lessons will help you grow as a player.
+              {t('learnOnlineDesc', { appName: SITE_CONFIG.name })}
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid md:grid-cols-2 gap-8 mb-12 max-w-4xl mx-auto"
             initial="hidden"
             whileInView="visible"
@@ -1373,20 +1379,20 @@ export function HomePageClient() {
           >
             {[
               {
-                title: 'Beginner-Friendly Chess Basics',
-                description: 'Start from zero with our comprehensive guide to piece movement, special rules, and fundamental checkmate patterns.',
+                title: t('beginnerBasics'),
+                description: t('beginnerBasicsDesc'),
               },
               {
-                title: 'Interactive Lessons and Practice',
-                description: 'Learn by doing with our interactive lessons where you make moves on a real chessboard and get immediate feedback.',
+                title: t('interactivePractice'),
+                description: t('interactivePracticeDesc'),
               },
               {
-                title: 'Openings, Endgames, and Strategy Tracks',
-                description: 'Progress through structured learning tracks covering opening principles, essential endgames, and advanced strategic concepts.',
+                title: t('openingsEndgames'),
+                description: t('openingsEndgamesDesc'),
               },
               {
-                title: 'Play vs AI or Friends',
-                description: 'Apply what you learn by playing games against our adjustable-strength AI or challenge friends to real-time matches.',
+                title: t('playVsAI'),
+                description: t('playVsAIDesc'),
               },
             ].map((item) => (
               <motion.div
@@ -1407,7 +1413,7 @@ export function HomePageClient() {
             ))}
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="text-center"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -1416,7 +1422,7 @@ export function HomePageClient() {
           >
             <Button asChild size="lg" variant="outline" className="rounded-xl h-12 px-8">
               <Link href="/how-it-works">
-                How It Works
+                {t('howItWorks')}
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -1427,7 +1433,7 @@ export function HomePageClient() {
       {/* What You Can Learn Section - Links to Guide Pages */}
       <section className="py-24 bg-secondary/50 relative">
         <ChessBoardPattern className="opacity-20" />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial="hidden"
@@ -1437,14 +1443,14 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              What You Can Learn
+              {t('whatYouCanLearn')}
             </h2>
             <p className="text-muted-foreground text-lg">
-              Free chess guides for every level — no account required
+              {t('whatYouCanLearnDesc')}
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
             initial="hidden"
             whileInView="visible"
@@ -1453,7 +1459,7 @@ export function HomePageClient() {
           >
             {chessGuides.map((guide) => (
               <motion.div
-                key={guide.title}
+                key={guide.titleKey}
                 variants={cardVariants}
               >
                 <Link href={guide.href}>
@@ -1464,11 +1470,11 @@ export function HomePageClient() {
                           <guide.icon className="h-6 w-6 text-primary" />
                         </div>
                         <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${guide.levelColor} text-white`}>
-                          {guide.level}
+                          {t(guide.levelKey)}
                         </span>
                       </div>
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors">{guide.title}</CardTitle>
-                      <CardDescription className="text-sm">{guide.description}</CardDescription>
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors">{t(guide.titleKey)}</CardTitle>
+                      <CardDescription className="text-sm">{t(guide.descriptionKey)}</CardDescription>
                     </CardHeader>
                   </Card>
                 </Link>
@@ -1476,7 +1482,7 @@ export function HomePageClient() {
             ))}
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="text-center mt-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -1485,7 +1491,7 @@ export function HomePageClient() {
           >
             <Button asChild size="lg" className="rounded-xl h-12 px-8">
               <Link href="/chess-guides">
-                Browse All Guides
+                {t('browseAllGuides')}
                 <ChevronRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
@@ -1496,7 +1502,7 @@ export function HomePageClient() {
       {/* Why Royal Gambit Section */}
       <section className="py-24 relative">
         <FloatingPieces />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial="hidden"
@@ -1506,14 +1512,14 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              Why Royal Gambit?
+              {t('whyRoyalGambit', { appName: SITE_CONFIG.name })}
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              A modern chess platform designed for learning and playing
+              {t('whyRoyalGambitDesc', { appName: SITE_CONFIG.name })}
             </p>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
             initial="hidden"
             whileInView="visible"
@@ -1522,7 +1528,7 @@ export function HomePageClient() {
           >
             {whyRoyalGambit.map((feature) => (
               <motion.div
-                key={feature.title}
+                key={feature.titleKey}
                 variants={cardVariants}
               >
                 <Card className="h-full text-center border-0 shadow-lg shadow-black/5 hover:shadow-xl hover:-translate-y-2 transition-all duration-500 group">
@@ -1530,8 +1536,8 @@ export function HomePageClient() {
                     <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300">
                       <feature.icon className="h-8 w-8 text-primary" />
                     </div>
-                    <h3 className="font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    <h3 className="font-semibold mb-2">{t(feature.titleKey)}</h3>
+                    <p className="text-sm text-muted-foreground">{t(feature.descriptionKey)}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1543,7 +1549,7 @@ export function HomePageClient() {
       {/* FAQ Section */}
       <section className="py-24 bg-secondary/50 relative">
         <ChessBoardPattern className="opacity-20" />
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial="hidden"
@@ -1553,11 +1559,11 @@ export function HomePageClient() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-5xl font-bold mb-4 tracking-tight">
-              Frequently Asked Questions
+              {t('faqTitle')}
             </h2>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             className="max-w-3xl mx-auto space-y-4"
             initial="hidden"
             whileInView="visible"
@@ -1571,8 +1577,8 @@ export function HomePageClient() {
               >
                 <Card className="border-0 shadow-lg shadow-black/5 hover:shadow-xl transition-all duration-300">
                   <CardContent className="p-8">
-                    <h3 className="font-semibold text-lg mb-3">{faq.question}</h3>
-                    <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+                    <h3 className="font-semibold text-lg mb-3">{t(faq.questionKey)}</h3>
+                    <p className="text-muted-foreground leading-relaxed">{t(faq.answerKey)}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -1597,20 +1603,20 @@ export function HomePageClient() {
                 <div className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/10">
                   <Crown className="w-10 h-10 text-primary" />
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Start?</h2>
+                <h2 className="text-3xl md:text-4xl font-bold mb-4">{t('readyToStart')}</h2>
                 <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                  Create a free account to play against bots, challenge friends, access interactive lessons, and track your progress.
+                  {t('readyToStartDesc')}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Button asChild size="lg" className="rounded-xl h-14 px-8 text-lg shadow-lg shadow-primary/25 group">
                     <Link href="/login">
-                      Get Started Free
+                      {t('getStartedFree')}
                       <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-6">
-                  Sign up with email or Google. No credit card required.
+                  {t('noCardRequired')}
                 </p>
               </CardContent>
             </Card>

@@ -1,6 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -77,6 +78,7 @@ function LessonCardInner({
   isInProgress,
   showLevel,
 }: LessonCardInnerProps) {
+  const t = useTranslations('learn');
   return (
     <div className="flex items-start gap-4">
       {/* Status icon */}
@@ -129,12 +131,12 @@ function LessonCardInner({
         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" />
-            <span>{lesson.estimatedMinutes} min</span>
+            <span>{lesson.estimatedMinutes} {t('minUnit')}</span>
           </div>
 
           {isInProgress && lesson.progress && (
             <span className="text-primary">
-              Step {lesson.progress.lastStepIndex + 1}
+              {t('stepN', { step: lesson.progress.lastStepIndex + 1 })}
             </span>
           )}
         </div>

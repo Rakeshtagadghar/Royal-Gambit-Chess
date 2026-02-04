@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { LOCALE_COOKIE_NAME } from '@/i18n/locales';
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -11,8 +13,10 @@ export async function GET(request: Request) {
   // Handle OAuth errors (e.g., user cancelled)
   if (error) {
     console.error('OAuth error:', error, errorDescription);
+    const cookieStore = await cookies();
+    const locale = cookieStore.get(LOCALE_COOKIE_NAME)?.value || 'en';
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(errorDescription || error)}`
+      `${origin}/${locale}/login?error=${encodeURIComponent(errorDescription || error)}`
     );
   }
 
@@ -24,15 +28,25 @@ export async function GET(request: Request) {
 
     if (!exchangeError) {
       // Successful authentication - redirect to intended destination
-      return NextResponse.redirect(`${origin}${redirectTo}`);
+      const cookieStore = await cookies();
+      const locale = cookieStore.get(LOCALE_COOKIE_NAME)?.value || 'en';
+
+      // Ensure targetPath starts with /
+      const targetPath = redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`;
+
+      return NextResponse.redirect(`${origin}/${locale}${targetPath}`);
     }
 
     console.error('Code exchange error:', exchangeError);
+    const cookieStore = await cookies();
+    const locale = cookieStore.get(LOCALE_COOKIE_NAME)?.value || 'en';
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent('Authentication failed. Please try again.')}`
+      `${origin}/${locale}/login?error=${encodeURIComponent('Authentication failed. Please try again.')}`
     );
   }
 
   // No code provided - redirect to login with error
-  return NextResponse.redirect(`${origin}/login?error=missing_code`);
+  const cookieStore = await cookies();
+  const locale = cookieStore.get(LOCALE_COOKIE_NAME)?.value || 'en';
+  return NextResponse.redirect(`${origin}/${locale}/login?error=missing_code`);
 }

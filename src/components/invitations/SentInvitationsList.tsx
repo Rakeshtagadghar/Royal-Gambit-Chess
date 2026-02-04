@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 import { toast } from 'sonner';
 import { Copy, Loader2, PlugZap, RefreshCcw, XCircle } from 'lucide-react';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
+import { useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { apiUrls } from '@/lib/api/urls';
@@ -82,11 +83,11 @@ function mapRealtimeRowToInvitation(row: Record<string, unknown>): Invitation {
   };
 }
 
-function statusToast(next: InvitationStatus) {
-  if (next === 'accepted') toast.success('Invite accepted', { description: 'You can join the game now.' });
-  if (next === 'declined') toast.error('Invite declined');
-  if (next === 'cancelled') toast('Invite cancelled');
-  if (next === 'expired') toast('Invite expired');
+function statusToast(next: InvitationStatus, t: (key: string) => string) {
+  if (next === 'accepted') toast.success(t('accepted'), { description: t('inviteAcceptedDesc') });
+  if (next === 'declined') toast.error(t('declined'));
+  if (next === 'cancelled') toast(t('cancelled'));
+  if (next === 'expired') toast(t('expired'));
 }
 
 export function SentInvitationsList() {
@@ -94,6 +95,8 @@ export function SentInvitationsList() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const userId = user?.id ?? null;
+  const t = useTranslations('invitations');
+  const tCommon = useTranslations('common');
 
   const [realtimeStatus, setRealtimeStatus] = useState<'SUBSCRIBED' | 'CONNECTING' | 'DISCONNECTED'>(
     'CONNECTING'
@@ -171,7 +174,7 @@ export function SentInvitationsList() {
             toUsername: prev?.toUsername ?? mapped.toUsername,
           };
 
-          if (prev && prev.status !== merged.status) statusToast(merged.status);
+          if (prev && prev.status !== merged.status) statusToast(merged.status, t);
 
           queryClient.setQueryData<Invitation[]>(SENT_INVITES_QUERY_KEY, (old = []) => {
             const idx = old.findIndex((x) => x.id === nextId);
@@ -215,10 +218,10 @@ export function SentInvitationsList() {
     },
     onError: (err, _id, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(SENT_INVITES_QUERY_KEY, ctx.previous);
-      toast.error('Cancel failed', { description: err.message });
+      toast.error(t('cancelFailed'), { description: err.message });
     },
     onSuccess: () => {
-      toast.success('Invite cancelled');
+      toast.success(t('cancelled'));
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: SENT_INVITES_QUERY_KEY });
@@ -242,9 +245,9 @@ export function SentInvitationsList() {
     const url = `${window.location.origin}/play?invite=${id}`;
     try {
       await navigator.clipboard.writeText(url);
-      toast.success('Invite link copied');
+      toast.success(t('linkCopied'));
     } catch {
-      toast.error('Failed to copy link');
+      toast.error(t('failedToCopy'));
     }
   };
 
@@ -268,15 +271,15 @@ export function SentInvitationsList() {
             ].join(' ')}
             title={
               realtimeStatus === 'SUBSCRIBED'
-                ? 'Realtime connected'
+                ? t('realtimeConnected')
                 : realtimeStatus === 'CONNECTING'
-                  ? 'Realtime connecting…'
-                  : 'Realtime disconnected'
+                  ? t('realtimeConnecting')
+                  : t('realtimeDisconnected')
             }
           />
           <span className="flex items-center gap-1">
             <PlugZap className="h-4 w-4" />
-            Realtime
+            {t('realtime')}
           </span>
         </div>
         <Button
@@ -284,10 +287,10 @@ export function SentInvitationsList() {
           size="sm"
           onClick={() => refetch()}
           disabled={isFetching}
-          title="Refresh"
+          title={tCommon('refresh')}
         >
           {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
-          <span className="hidden sm:inline">Refresh</span>
+          <span className="hidden sm:inline">{tCommon('refresh')}</span>
         </Button>
       </div>
 
@@ -301,25 +304,25 @@ export function SentInvitationsList() {
         <div className="rounded-lg border p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-medium">Failed to load sent invites</p>
+              <p className="font-medium">{t('failedToLoad')}</p>
               <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
             </div>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
-              Retry
+              {tCommon('retry')}
             </Button>
           </div>
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-lg border p-6 text-center">
-          <p className="font-medium">No sent invites yet.</p>
-          <p className="text-sm text-muted-foreground">Invite a friend to play!</p>
+          <p className="font-medium">{t('noSentInvites')}</p>
+          <p className="text-sm text-muted-foreground">{t('inviteFriend')}</p>
         </div>
       ) : (
         <ScrollArea className="h-[420px] rounded-lg border">
           <div className="divide-y">
             {items.map((inv) => {
               const recipient =
-                inv.toUsername ?? inv.toEmail ?? (inv.toUserId ? `User ${inv.toUserId.slice(0, 8)}…` : 'Unknown');
+                inv.toUsername ?? inv.toEmail ?? (inv.toUserId ? `${inv.toUserId.slice(0, 8)}…` : t('unknown'));
               const badge = statusBadge(inv.status);
               const showJoin = inv.status === 'accepted';
               const showPendingActions = inv.status === 'pending';
@@ -340,8 +343,8 @@ export function SentInvitationsList() {
                         <Separator orientation="vertical" className="h-4" />
                         <span className="capitalize">{inv.colorPreference}</span>
                         <Separator orientation="vertical" className="h-4 hidden sm:block" />
-                        <span className="hidden sm:inline">Created {formatWhen(inv.createdAt)}</span>
-                        <span className="hidden sm:inline">· Expires {formatWhen(inv.expiresAt)}</span>
+                        <span className="hidden sm:inline">{t('created')} {formatWhen(inv.createdAt)}</span>
+                        <span className="hidden sm:inline">· {t('expires')} {formatWhen(inv.expiresAt)}</span>
                       </div>
                     </div>
 
@@ -350,7 +353,7 @@ export function SentInvitationsList() {
                         <>
                           <Button variant="outline" size="sm" onClick={() => copyInviteLink(inv.id)}>
                             <Copy className="h-4 w-4" />
-                            Copy Link
+                            {t('copyLink')}
                           </Button>
                           <Button
                             variant="outline"
@@ -363,7 +366,7 @@ export function SentInvitationsList() {
                             ) : (
                               <XCircle className="h-4 w-4" />
                             )}
-                            Cancel
+                            {tCommon('cancel')}
                           </Button>
                         </>
                       )}
@@ -373,15 +376,15 @@ export function SentInvitationsList() {
                           size="sm"
                           onClick={() => joinGame(inv.gameId)}
                           disabled={!inv.gameId}
-                          title={inv.gameId ? 'Join game' : 'Waiting for acceptance'}
+                          title={inv.gameId ? t('joinGame') : t('waitingForAcceptance')}
                         >
-                          Join Game
+                          {t('joinGame')}
                         </Button>
                       )}
 
                       {showDismiss && (
                         <Button variant="outline" size="sm" onClick={() => dismiss(inv.id)}>
-                          Dismiss
+                          {t('dismiss')}
                         </Button>
                       )}
                     </div>

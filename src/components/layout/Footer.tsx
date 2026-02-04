@@ -1,10 +1,13 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { Shield, Cookie, Github, ScrollText, Users, Mail } from 'lucide-react';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
+  const t = useTranslations('footer');
+  const tNav = useTranslations('nav');
 
   return (
     <footer className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -17,32 +20,32 @@ export function Footer() {
               <span>RoyalGambit</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              A modern chess platform. Play against bots, friends, or find opponents online.
+              {t('description')}
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-3">Quick Links</h3>
+            <h3 className="font-semibold mb-3">{t('quickLinks')}</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link href="/play" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Play Chess
+                  {tNav('play')}
                 </Link>
               </li>
               <li>
                 <Link href="/learn" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Learn
+                  {tNav('learn')}
                 </Link>
               </li>
               <li>
                 <Link href="/chess-guides" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Chess Guides
+                  {tNav('guides')}
                 </Link>
               </li>
               <li>
                 <Link href="/leaderboard" className="text-muted-foreground hover:text-foreground transition-colors">
-                  Leaderboard
+                  {tNav('leaderboard')}
                 </Link>
               </li>
             </ul>
@@ -50,7 +53,7 @@ export function Footer() {
 
           {/* Company */}
           <div>
-            <h3 className="font-semibold mb-3">Company</h3>
+            <h3 className="font-semibold mb-3">{t('company')}</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
@@ -58,7 +61,7 @@ export function Footer() {
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Users className="h-4 w-4" />
-                  About Us
+                  {t('about')}
                 </Link>
               </li>
               <li>
@@ -67,7 +70,7 @@ export function Footer() {
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Mail className="h-4 w-4" />
-                  Contact Us
+                  {t('contact')}
                 </Link>
               </li>
             </ul>
@@ -75,7 +78,7 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h3 className="font-semibold mb-3">Legal</h3>
+            <h3 className="font-semibold mb-3">{t('legal')}</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
@@ -83,7 +86,7 @@ export function Footer() {
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Shield className="h-4 w-4" />
-                  Privacy Policy
+                  {t('privacyPolicy')}
                 </Link>
               </li>
               <li>
@@ -92,7 +95,7 @@ export function Footer() {
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Cookie className="h-4 w-4" />
-                  Cookie Policy
+                  {t('cookiePolicy')}
                 </Link>
               </li>
               <li>
@@ -101,7 +104,7 @@ export function Footer() {
                   className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <ScrollText className="h-4 w-4" />
-                  Terms of Service
+                  {t('termsOfService')}
                 </Link>
               </li>
             </ul>
@@ -115,7 +118,7 @@ export function Footer() {
             By using our site, you agree that we and Microsoft can collect and use this data.
             Our{' '}
             <Link href="/privacy-policy" className="text-primary hover:underline">
-              privacy statement
+              {t('privacyPolicy').toLowerCase()}
             </Link>
             {' '}has more details.
           </p>
@@ -124,7 +127,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t mt-6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {currentYear} RoyalGambit. All rights reserved.
+            © {currentYear} RoyalGambit. {t('allRightsReserved')}
           </p>
           <div className="flex items-center gap-4">
             <a

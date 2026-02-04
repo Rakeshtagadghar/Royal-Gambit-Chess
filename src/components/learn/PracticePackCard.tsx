@@ -1,6 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ interface PracticePackCardProps {
 }
 
 export function PracticePackCard({ pack, index = 0 }: PracticePackCardProps) {
+  const t = useTranslations('learn');
   const puzzleCount = pack.puzzleCount || 0;
   const solvedCount = pack.solvedCount || 0;
   const progress = puzzleCount > 0 ? Math.round((solvedCount / puzzleCount) * 100) : 0;
@@ -52,7 +54,7 @@ export function PracticePackCard({ pack, index = 0 }: PracticePackCardProps) {
 
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Target className="w-3.5 h-3.5" />
-              <span>{puzzleCount} puzzles</span>
+              <span>{t('nPuzzles', { count: puzzleCount })}</span>
             </div>
 
             {/* Progress bar */}
@@ -60,7 +62,7 @@ export function PracticePackCard({ pack, index = 0 }: PracticePackCardProps) {
               <div className="space-y-1">
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">
-                    {solvedCount}/{puzzleCount} solved
+                    {t('solvedProgress', { solved: solvedCount, total: puzzleCount })}
                   </span>
                   <span className="font-medium">{progress}%</span>
                 </div>

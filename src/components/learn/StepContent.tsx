@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import { Square, PieceSymbol } from 'chess.js';
 import { useLearnStore } from '@/stores/learnStore';
 import { QuizCard } from './QuizCard';
@@ -66,6 +67,7 @@ function ModelLinePlayer() {
   const { steps, currentStepIndex, game, markStepComplete, stepCompleted } = useLearnStore();
   const [moveIndex, setMoveIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const t = useTranslations('learn.lesson');
 
   const step = steps[currentStepIndex];
   const solutionLine = step?.solutionLineUci || [];
@@ -143,7 +145,7 @@ function ModelLinePlayer() {
   return (
     <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3">
       <p className="text-sm text-amber-200 mb-3">
-        Watch the example line ({moveIndex}/{solutionLine.length} moves)
+        {t('watchExample', { current: moveIndex, total: solutionLine.length })}
       </p>
       <div className="flex gap-2">
         <button
@@ -152,7 +154,7 @@ function ModelLinePlayer() {
           className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white transition-colors"
         >
           <SkipForward className="w-4 h-4" />
-          Next
+          {t('next')}
         </button>
         <button
           onClick={playAll}
@@ -160,7 +162,7 @@ function ModelLinePlayer() {
           className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm text-white transition-colors"
         >
           <Play className="w-4 h-4" />
-          Play All
+          {t('playAll')}
         </button>
         <button
           onClick={resetLine}
@@ -168,7 +170,7 @@ function ModelLinePlayer() {
           className="flex items-center gap-1 px-3 py-1.5 bg-muted hover:bg-muted/80 disabled:opacity-50 disabled:cursor-not-allowed rounded text-sm transition-colors"
         >
           <RotateCcw className="w-4 h-4" />
-          Reset
+          {t('reset')}
         </button>
       </div>
     </div>
@@ -183,6 +185,9 @@ export function StepContent() {
     wrongMoveMessage,
     correctMoveMessage,
   } = useLearnStore();
+
+  const t = useTranslations('learn.lesson');
+  const tColor = useTranslations('game.colors');
 
   const step = steps[currentStepIndex];
 
@@ -209,10 +214,13 @@ export function StepContent() {
       {step.type === 'move_task' && !stepCompleted && (
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
           <p className="text-sm text-blue-200">
-            Find the best move for {step.initialFen?.includes(' w ') ? 'White' : 'Black'}
+            {t('findBestMove', { color: step.initialFen?.includes(' w ') ? tColor('white') : tColor('black') })}
             {step.meta?.pieceToMove && (
               <span className="block mt-1 font-medium">
-                Move the piece on <span className="uppercase font-bold text-blue-300">{step.meta.pieceToMove}</span>
+                {t.rich('movePiece', {
+                  square: step.meta.pieceToMove.toUpperCase(),
+                  squareTag: (chunks) => <span className="uppercase font-bold text-blue-300">{chunks}</span>
+                })}
               </span>
             )}
           </p>
@@ -223,7 +231,7 @@ export function StepContent() {
       {step.type === 'puzzle' && !stepCompleted && (
         <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
           <p className="text-sm text-purple-200">
-            Solve the puzzle - find the winning sequence!
+            {t('solvePuzzle')}
           </p>
         </div>
       )}

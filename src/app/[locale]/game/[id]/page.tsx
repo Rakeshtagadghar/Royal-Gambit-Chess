@@ -1,0 +1,648 @@
+'use client';
+
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { useParams } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
+import { Square, PieceSymbol } from 'chess.js';
+import { Navbar } from '@/components/layout/Navbar';
+import { ChessBoard, MoveList, PlayerCard, GameActions, MoveControls } from '@/components/chess';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { useGameStore } from '@/stores/gameStore';
+import { useAuth } from '@/contexts/AuthContext';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import type { Game, TimeControl } from '@/types/chess';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { Loader2, Copy, Check, Share2 } from 'lucide-react';
+import { apiUrls } from '@/lib/api/urls';
+
+type GameRow = {
+  id: string;
+  mode: 'bot' | 'pvp';
+  game_mode?: string | null;
+  status: 'waiting' | 'active' | 'finished' | 'aborted';
+  white_id: string | null;
+  black_id: string | null;
+  created_by: string;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  initial_fen: string | null;
+  current_fen: string | null;
+  pgn: string | null;
+  result: string | null;
+  termination: string | null;
+  time_control: TimeControl | null;
+  ratings_processed: boolean | null;
+  white?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
+  black?: { id: string; username: string; display_name?: string | null; avatar_url?: string | null } | null;
+};
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null;
+}
+
+function transformGameRow(game: GameRow, t: (key: string) => string) {
+  const whiteProfile = game.white ?? null;
+  const blackProfile = game.black ?? null;
+  const timeControl: TimeControl = game.time_control ?? { baseMs: 300000, incrementMs: 0 };
+  const termination = (game.termination ?? undefined) as Game['termination'];
+  return {
+    id: game.id,
+    mode: game.mode as 'bot' | 'pvp',
+    gameMode: (game.game_mode || 'blitz') as 'bullet' | 'blitz' | 'rapid' | 'classical',
+    status: game.status as 'waiting' | 'active' | 'finished' | 'aborted',
+    whitePlayer: game.white_id
+      ? {
+          id: game.white_id,
+          username: whiteProfile?.username ?? t('player1'),
+          displayName: whiteProfile?.display_name ?? undefined,
+          avatarUrl: whiteProfile?.avatar_url ?? undefined,
+          timeRemainingMs: timeControl.baseMs,
+        }
+      : undefined,
+    blackPlayer: game.black_id
+      ? {
+          id: game.black_id,
+          username: blackProfile?.username ?? t('player2'),
+          displayName: blackProfile?.display_name ?? undefined,
+          avatarUrl: blackProfile?.avatar_url ?? undefined,
+          timeRemainingMs: timeControl.baseMs,
+        }
+      : undefined,
+    createdBy: game.created_by,
+    createdAt: game.created_at,
+    startedAt: game.started_at ?? undefined,
+    endedAt: game.ended_at ?? undefined,
+    initialFen:
+      game.initial_fen ||
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    currentFen:
+      game.current_fen ||
+      'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    pgn: game.pgn || '',
+    result: (game.result || '*') as '1-0' | '0-1' | '1/2-1/2' | '*',
+    termination,
+    timeControl,
+    ratingsProcessed: game.ratings_processed || false,
+    moves: [],
+  } satisfies Game;
+}
+
+export default function GamePage() {
+  const params = useParams();
+  const router = useRouter();
+  const gameId = params.id as string;
+  const { user, profile, isAuthenticated } = useAuth();
+  const t = useTranslations('game');
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [opponentConnected, setOpponentConnected] = useState(false);
+  const [rawGame, setRawGame] = useState<GameRow | null>(null);
+  const [isJoining, setIsJoining] = useState(false);
+  const [profilesById, setProfilesById] = useState<
+    Record<string, { id: string; username: string; displayName?: string; avatarUrl?: string }>
+  >({});
+
+  const {
+    status,
+    result,
+    termination,
+    playerColor,
+    loadGame,
+    setResult,
+    setPlayerColor,
+  } = useGameStore();
+
+  const timeoutSyncedRef = useRef(false);
+
+  // Persist timeout result to server (clock is client-driven, so we must sync the final status).
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (!gameId) return;
+    if (status !== 'finished') return;
+    if (termination !== 'timeout') return;
+    if (timeoutSyncedRef.current) return;
+    if (rawGame?.status === 'finished') return;
+
+    timeoutSyncedRef.current = true;
+
+    (async () => {
+      try {
+        const resp = await fetch(apiUrls.games.timeout(gameId), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result }),
+        });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(j?.error || t('failedToSyncTimeout'));
+
+        if (j?.game) {
+          setRawGame(j.game);
+          loadGame(transformGameRow(j.game, t));
+        }
+      } catch (e) {
+        console.error('Failed to sync timeout:', e);
+        // Allow retry if the request failed.
+        timeoutSyncedRef.current = false;
+      }
+    })();
+  }, [isAuthenticated, gameId, status, termination, result, rawGame?.status, loadGame, t]);
+
+  // Fetch game data
+  useEffect(() => {
+    const fetchGame = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        console.log('🔵 Fetching game:', gameId);
+
+        const timeoutMs = 10000;
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(t('timedOut'))), timeoutMs)
+        );
+
+        const queryPromise = fetch(apiUrls.games.get(gameId), {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const response = await Promise.race([queryPromise, timeoutPromise]);
+        const json = await response.json();
+
+        if (!response.ok) {
+          throw new Error(json?.error || t('failedToLoad'));
+        }
+
+        const game = (json as { game?: unknown } | null)?.game;
+        if (!isRecord(game) || typeof game.id !== 'string') throw new Error(t('gameNotFound'));
+
+        setRawGame(game as unknown as GameRow);
+
+        // If the API already returned nested player profiles, seed our local cache for realtime friendliness.
+        setProfilesById((prev) => {
+          const next = { ...prev };
+          const white = (game as GameRow).white;
+          const black = (game as GameRow).black;
+          if (white?.id) {
+            next[white.id] = {
+              id: white.id,
+              username: white.username,
+              displayName: white.display_name ?? undefined,
+              avatarUrl: white.avatar_url ?? undefined,
+            };
+          }
+          if (black?.id) {
+            next[black.id] = {
+              id: black.id,
+              username: black.username,
+              displayName: black.display_name ?? undefined,
+              avatarUrl: black.avatar_url ?? undefined,
+            };
+          }
+          return next;
+        });
+
+        loadGame(transformGameRow(game as unknown as GameRow, t));
+      } catch (err: unknown) {
+        console.error('Error fetching game:', err);
+        setError(err instanceof Error ? err.message : t('failedToLoad'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (gameId) {
+      fetchGame();
+    }
+  }, [gameId, loadGame, t]);
+
+  // Set player color once we have both the game and the user
+  useEffect(() => {
+    if (!rawGame || !user) return;
+    if (rawGame.white_id === user.id) setPlayerColor('w');
+    else if (rawGame.black_id === user.id) setPlayerColor('b');
+    else setPlayerColor(null);
+  }, [rawGame, user, setPlayerColor]);
+
+  // Load profile info for both players (PvP) so we can show opponent name/avatar.
+  useEffect(() => {
+    const loadProfiles = async () => {
+      if (!rawGame) return;
+
+      // If the realtime payload includes nested profiles (rare) or we already have them cached, skip fetch.
+      const ids = [rawGame.white_id, rawGame.black_id].filter(Boolean) as string[];
+      const missing = ids.filter((id) => !profilesById[id]);
+      if (missing.length === 0) return;
+
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url')
+          .in('id', missing);
+
+        if (error) {
+          console.warn('Failed to load player profiles:', error);
+          return;
+        }
+
+        setProfilesById((prev) => {
+          const next = { ...prev };
+          (data ?? []).forEach((p: Record<string, unknown>) => {
+            const id = p.id as string;
+            next[id] = {
+              id,
+              username: (p.username as string) ?? t('player'),
+              displayName: (p.display_name as string | null | undefined) ?? undefined,
+              avatarUrl: (p.avatar_url as string | null | undefined) ?? undefined,
+            };
+          });
+          return next;
+        });
+      } catch (e) {
+        console.warn('Failed to load player profiles:', e);
+      }
+    };
+
+    loadProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawGame?.white_id, rawGame?.black_id]);
+
+  const youInfo = useMemo(() => {
+    const fallbackName = user?.email?.split('@')[0] || 'You';
+    return {
+      username: profile?.username || fallbackName,
+      displayName: profile?.displayName,
+      avatarUrl: profile?.avatarUrl,
+    };
+  }, [profile?.avatarUrl, profile?.displayName, profile?.username, user?.email]);
+
+  const opponentInfo = useMemo(() => {
+    if (!rawGame) return { username: t('opponent') as string, displayName: undefined as string | undefined, avatarUrl: undefined as string | undefined, isBot: false as boolean };
+    if (rawGame.mode === 'bot') {
+      return { username: t('stockfish'), displayName: t('stockfish'), avatarUrl: undefined, isBot: true };
+    }
+    if (!user) return { username: t('opponent'), displayName: undefined, avatarUrl: undefined, isBot: false };
+
+    const opponentId =
+      rawGame.white_id === user.id ? (rawGame.black_id as string | null) : (rawGame.white_id as string | null);
+
+    if (!opponentId) return { username: t('waitingEllipsis'), displayName: t('waitingEllipsis'), avatarUrl: undefined, isBot: false };
+
+    const p = profilesById[opponentId];
+    return {
+      username: p?.username || t('opponent'),
+      displayName: p?.displayName,
+      avatarUrl: p?.avatarUrl,
+      isBot: false,
+    };
+  }, [profilesById, rawGame, user, t]);
+
+  const joinGame = async () => {
+    if (!isAuthenticated || !user || !rawGame) return;
+    setIsJoining(true);
+    try {
+      const res = await fetch(apiUrls.games.join(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || t('failedToJoin'));
+
+      toast.success(t('joinedGame'));
+
+      const joinedGame = (data?.game ?? null) as GameRow | null;
+      if (joinedGame) {
+        setRawGame(joinedGame);
+        loadGame(transformGameRow(joinedGame, t));
+      } else {
+        // Safety fallback: re-load via server API if response didn't include a game
+        const resp = await fetch(apiUrls.games.get(gameId));
+        const j = await resp.json();
+        if (!resp.ok) throw new Error(j?.error || t('failedToReload'));
+        setRawGame(j.game);
+        loadGame(transformGameRow(j.game, t));
+      }
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : t('failedToJoin'));
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  // Set up realtime subscription
+  useEffect(() => {
+    if (!gameId || isLoading) return;
+
+    const supabase = getSupabaseClient();
+
+    // Subscribe to game changes
+    const channel = supabase
+      .channel(`game:${gameId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'games',
+          filter: `id=eq.${gameId}`,
+        },
+        (payload: { new?: unknown } | unknown) => {
+          console.log('Game update:', payload);
+          const next = isRecord(payload) ? (payload.new as unknown) : undefined;
+          if (!isRecord(next)) return;
+          if (next && next.id) {
+            setRawGame(next as GameRow);
+            loadGame(transformGameRow(next as GameRow, t));
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'moves',
+          filter: `game_id=eq.${gameId}`,
+        },
+        (payload: unknown) => {
+          console.log('New move:', payload);
+          // Handle new moves from opponent
+        }
+      )
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        setOpponentConnected(Object.keys(state).length > 1);
+      })
+      .subscribe(async (status: string) => {
+        if (status === 'SUBSCRIBED' && user) {
+          await channel.track({ user_id: user.id });
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [gameId, isLoading, user, loadGame, t]);
+
+  // Handle move
+  const handleMove = useCallback(
+    async (from: Square, to: Square, promotion: PieceSymbol | undefined, clientPly: number) => {
+      if (!isAuthenticated) return;
+
+      try {
+        const response = await fetch(apiUrls.games.move(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameId,
+            uci: `${from}${to}${promotion || ''}`,
+            clientPly,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || t('failedToMakeMove'));
+        }
+      } catch (error) {
+        toast.error(t('failedToSubmitMove'));
+        console.error('Move error:', error);
+      }
+    },
+    [gameId, isAuthenticated, t]
+  );
+
+  const handleResign = async () => {
+    if (!isAuthenticated) return;
+
+    const result = playerColor === 'w' ? '0-1' : '1-0';
+    setResult(result, 'resign');
+
+    // Update server
+    try {
+      const resp = await fetch(apiUrls.games.resign(gameId), { method: 'POST' });
+      const j = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(j?.error || t('failedToResign'));
+
+      if (j?.game) {
+        setRawGame(j.game);
+        loadGame(transformGameRow(j.game, t));
+      }
+    } catch (error) {
+      console.error('Failed to resign:', error);
+      toast.error(t('failedToResign'));
+    }
+  };
+
+  const handleOfferDraw = async () => {
+    toast.info(t('drawOfferSent'));
+    // Implement draw offer logic
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success(t('linkCopied'));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 text-center">
+          <h1 className="text-2xl font-bold mb-4">{t('error')}</h1>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+            >
+              {t('retry')}
+            </Button>
+            <Button onClick={() => router.push('/play')}>{t('backToPlay')}</Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Waiting for opponent
+  if (status === 'waiting') {
+    const isParticipant =
+      !!user && !!rawGame && (rawGame.white_id === user.id || rawGame.black_id === user.id);
+    const canJoin =
+      !!user &&
+      !!rawGame &&
+      !isParticipant &&
+      rawGame.status === 'waiting' &&
+      (rawGame.white_id === null || rawGame.black_id === null);
+
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 max-w-md">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle>{t('waitingForOpponent')}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <motion.div
+                className="text-6xl"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 2 }}
+              >
+                ♟
+              </motion.div>
+              <p className="text-muted-foreground">
+                {canJoin ? t('joinPrompt') : t('sharePrompt')}
+              </p>
+              {canJoin && (
+                <Button className="w-full" onClick={joinGame} disabled={isJoining}>
+                  {isJoining ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t('joining')}
+                    </>
+                  ) : (
+                    t('joinGame')
+                  )}
+                </Button>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={window.location.href}
+                  aria-label={t('gameLink')}
+                  title={t('gameLink')}
+                  readOnly
+                  className="flex-1 px-3 py-2 text-sm bg-muted rounded-md font-mono truncate"
+                />
+                <Button variant="outline" size="icon" onClick={copyLink}>
+                  {copied ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <Button variant="outline" className="w-full" onClick={copyLink}>
+                <Share2 className="mr-2 h-4 w-4" />
+                {t('shareLink')}
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  // Active game
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+
+      <main className="container mx-auto px-4 py-4">
+        <div className="flex flex-col lg:flex-row gap-6 max-w-6xl mx-auto">
+          {/* Board Section */}
+          <div className="flex-1">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center"
+            >
+              {/* Top player (opponent) */}
+              <div className="w-full max-w-[560px] mb-2">
+                <PlayerCard
+                  color={playerColor === 'w' ? 'black' : 'white'}
+                  username={opponentInfo.username}
+                  displayName={opponentInfo.displayName}
+                  avatarUrl={opponentInfo.avatarUrl}
+                  isBot={opponentInfo.isBot}
+                  isOnline={opponentConnected}
+                />
+              </div>
+
+              {/* Chess board */}
+              <ChessBoard onMove={handleMove} />
+
+              {/* Bottom player (you) */}
+              <div className="w-full max-w-[560px] mt-2">
+                <PlayerCard
+                  color={playerColor === 'w' ? 'white' : 'black'}
+                  username={youInfo.username}
+                  displayName={youInfo.displayName}
+                  avatarUrl={youInfo.avatarUrl}
+                  isOnline
+                />
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Side Panel */}
+          <div className="w-full lg:w-80">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{t('gameTitle')}</CardTitle>
+                  <span className={cn(
+                    'text-sm px-2 py-1 rounded',
+                    status === 'active' ? 'bg-green-500/20 text-green-500' : 'bg-muted text-muted-foreground'
+                  )}>
+                    {status === 'active' ? t('inProgress') : status}
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Connection status */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className={cn(
+                    'h-2 w-2 rounded-full',
+                    opponentConnected ? 'bg-green-500' : 'bg-yellow-500'
+                  )} />
+                  {opponentConnected ? t('opponentConnected') : t('waitingForOpponentConnection')}
+                </div>
+
+                <Separator />
+
+                {/* Move List */}
+                <div>
+                  <h3 className="text-sm font-medium mb-2">{t('moves')}</h3>
+                  <MoveList className="border rounded-lg" />
+                  <MoveControls />
+                </div>
+
+                <Separator />
+
+                {/* Game Actions */}
+                <GameActions
+                  onResign={handleResign}
+                  onOfferDraw={handleOfferDraw}
+                  showRematch={status === 'finished'}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

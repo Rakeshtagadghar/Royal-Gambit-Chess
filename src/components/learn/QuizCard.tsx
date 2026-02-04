@@ -1,10 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { useLearnStore } from '@/stores/learnStore';
 import { cn } from '@/lib/utils';
 import { Check, X } from 'lucide-react';
+
 
 export function QuizCard() {
   const {
@@ -18,6 +20,8 @@ export function QuizCard() {
     resetQuiz,
   } = useLearnStore();
 
+
+  const t = useTranslations('learn.lesson');
   const step = steps[currentStepIndex];
   const quiz = step?.meta?.quiz;
 
@@ -84,7 +88,7 @@ export function QuizCard() {
           className="w-full"
           size="sm"
         >
-          Submit Answer
+          {t('submitAnswer')}
         </Button>
       )}
 
@@ -101,12 +105,12 @@ export function QuizCard() {
             {quizCorrect ? (
               <>
                 <Check className="w-4 h-4 text-green-500" />
-                <span className="font-semibold text-green-500 text-sm">Correct!</span>
+                <span className="font-semibold text-green-500 text-sm">{t('correct')}</span>
               </>
             ) : (
               <>
                 <X className="w-4 h-4 text-red-500" />
-                <span className="font-semibold text-red-500 text-sm">Not quite</span>
+                <span className="font-semibold text-red-500 text-sm">{t('notQuite')}</span>
               </>
             )}
           </div>
@@ -123,7 +127,7 @@ export function QuizCard() {
           className="w-full"
           size="sm"
         >
-          Try Again
+          {t('tryAgain')}
         </Button>
       )}
     </div>

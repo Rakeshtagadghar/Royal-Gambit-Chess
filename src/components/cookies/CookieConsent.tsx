@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useSyncExternalStore } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Cookie, X } from "lucide-react";
@@ -14,6 +15,8 @@ type ConsentType = "all" | "essential" | "rejected" | null;
 
 export function CookieConsent() {
   const [showBanner, setShowBanner] = useState(false);
+  const t = useTranslations("cookies");
+  const tFooter = useTranslations("footer");
 
   useEffect(() => {
     // Read localStorage only after mount to avoid hydration mismatch
@@ -81,7 +84,7 @@ export function CookieConsent() {
 
                 <div className="flex-1 space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold">We value your privacy</h3>
+                    <h3 className="font-semibold">{t("title")}</h3>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -93,35 +96,33 @@ export function CookieConsent() {
                   </div>
 
                   <p className="text-sm text-muted-foreground">
-                    We use cookies for analytics, advertising, and to improve our services.
-                    Read our{" "}
+                    {t("description")}{" "}
                     <Link href="/cookie-policy" className="text-primary hover:underline">
-                      Cookie Policy
+                      {tFooter("cookiePolicy")}
                     </Link>{" "}
-                    and{" "}
+                    &{" "}
                     <Link href="/privacy-policy" className="text-primary hover:underline">
-                      Privacy Policy
-                    </Link>{" "}
-                    to learn more.
+                      {tFooter("privacyPolicy")}
+                    </Link>
                   </p>
 
                   <div className="flex flex-col sm:flex-row gap-2">
                     <Button onClick={acceptAll} className="flex-1 sm:flex-none">
-                      Accept All
+                      {t("acceptAll")}
                     </Button>
                     <Button
                       variant="secondary"
                       onClick={acceptEssential}
                       className="flex-1 sm:flex-none"
                     >
-                      Accept Essential
+                      {t("acceptEssential")}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={rejectAll}
                       className="flex-1 sm:flex-none"
                     >
-                      Reject All
+                      {t("rejectAll")}
                     </Button>
                   </div>
                 </div>

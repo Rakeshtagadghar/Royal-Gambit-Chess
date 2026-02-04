@@ -1,0 +1,188 @@
+'use client';
+
+import { Suspense, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { motion } from 'framer-motion';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
+import { Navbar } from '@/components/layout/Navbar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { InvitationsPanel } from '@/components/invitations/InvitationsPanel';
+import { useAuth } from '@/contexts/AuthContext';
+import { Bot, Users, UserPlus, Zap, Clock, Trophy, Gamepad2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+function VerificationToast() {
+  const searchParams = useSearchParams();
+  const t = useTranslations('play');
+
+  useEffect(() => {
+    if (searchParams.get('verified') === 'true') {
+      toast.success(t('emailVerified'), {
+        description: t('emailVerifiedDesc'),
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/play');
+    }
+  }, [searchParams, t]);
+
+  return null;
+}
+
+export default function PlayPage() {
+  const { isAuthenticated } = useAuth();
+  const t = useTranslations('play');
+  const tNav = useTranslations('nav');
+
+  const gameModes = [
+    {
+      id: 'bot',
+      title: t('vsBot'),
+      description: t('botDescription'),
+      icon: Bot,
+      href: '/bot',
+      badge: t('noAccountNeeded'),
+      badgeVariant: 'secondary' as const,
+      features: [t('difficultyLevels'), t('instantStart'), t('practiceMode')],
+    },
+    {
+      id: 'friend',
+      title: t('vsFriend'),
+      description: t('friendDescription'),
+      icon: Users,
+      href: '/lobby?mode=friend',
+      badge: t('realtime'),
+      badgeVariant: 'default' as const,
+      features: [t('shareLinkInvite'), t('customTimeControls'), t('rematchOption')],
+    },
+    {
+      id: 'matchmaking',
+      title: t('findOpponent'),
+      description: t('matchmakingDescription'),
+      icon: UserPlus,
+      href: '/lobby?mode=queue',
+      badge: t('quickMatch'),
+      badgeVariant: 'default' as const,
+      features: [t('automaticPairing'), t('skillBased'), t('multipleTimeControls')],
+    },
+  ];
+
+  const timeControls = [
+    { icon: Zap, label: t('bullet'), times: ['1+0', '2+1'] },
+    { icon: Clock, label: t('blitz'), times: ['3+0', '5+0', '5+3'] },
+    { icon: Trophy, label: t('rapid'), times: ['10+0', '15+10'] },
+  ];
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 py-8 text-center">
+          <Gamepad2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h1 className="text-2xl font-bold mb-2">{t('title')}</h1>
+          <p className="text-muted-foreground mb-4">{t('signInToAccess')}</p>
+          <Button asChild>
+            <Link href="/login?redirect=/play">{tNav('signIn')}</Link>
+          </Button>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Navbar />
+      <Suspense fallback={null}>
+        <VerificationToast />
+      </Suspense>
+
+      <main className="container mx-auto px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-3xl font-bold mb-2">{t('chooseGameMode')}</h1>
+          <p className="text-muted-foreground">
+            {t('selectHowToPlay')}
+          </p>
+        </motion.div>
+
+        {/* Game Mode Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          {gameModes.map((mode, index) => (
+            <motion.div
+              key={mode.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Link href={mode.href}>
+                <Card className="h-full hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer group">
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <mode.icon className="h-10 w-10 text-primary group-hover:scale-110 transition-transform" />
+                      <Badge variant={mode.badgeVariant}>{mode.badge}</Badge>
+                    </div>
+                    <CardTitle className="group-hover:text-primary transition-colors">
+                      {mode.title}
+                    </CardTitle>
+                    <CardDescription>{mode.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      {mode.features.map((feature, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </Link>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Invitations */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-12"
+        >
+          <InvitationsPanel />
+        </motion.div>
+
+        {/* Time Controls Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h2 className="text-xl font-semibold mb-4">{t('availableTimeControls')}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {timeControls.map((tc) => (
+              <Card key={tc.label}>
+                <CardContent className="py-4">
+                  <div className="flex items-center gap-3">
+                    <tc.icon className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="font-medium">{tc.label}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {tc.times.join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </motion.div>
+      </main>
+    </div>
+  );
+}

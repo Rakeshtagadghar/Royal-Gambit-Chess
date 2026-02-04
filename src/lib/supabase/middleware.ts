@@ -12,8 +12,30 @@ const PROTECTED_ROUTES = [
 ];
 const AUTH_ROUTES = ['/login', '/auth'];
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+// Locale prefix pattern to strip before checking protected routes
+const LOCALE_PREFIX_PATTERN = /^\/(en|fr|hi|sa)/;
+
+function stripLocalePrefix(pathname: string): string {
+  return pathname.replace(LOCALE_PREFIX_PATTERN, '');
+}
+
+function getLocaleFromPath(pathname: string): string | null {
+  const match = pathname.match(LOCALE_PREFIX_PATTERN);
+  return match ? match[1] : null;
+}
+
+export async function updateSession(request: NextRequest, response?: NextResponse) {
+  console.log('[Supabase Middleware] Entering updateSession', {
+    hasResponse: !!response,
+    intlLocaleHeader: response?.headers.get('x-next-intl-locale')
+  });
+  if (response) {
+    console.log('updateSession incoming headers:',
+      response.headers.get('x-next-intl-locale'),
+      response.headers.get('x-middleware-rewrite')
+    );
+  }
+  let supabaseResponse = response || NextResponse.next({ request });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,8 +50,46 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          // Create fresh response with updated cookies
-          supabaseResponse = NextResponse.next({ request });
+
+          // Prepare request headers with locale to ensure next-intl receives it
+          const requestHeaders = new Headers(request.headers);
+          const localeFromPath = getLocaleFromPath(request.nextUrl.pathname);
+          const intlLocaleHeader = response?.headers.get('x-next-intl-locale');
+
+          console.log('[Middleware Debug]', {
+            pathname: request.nextUrl.pathname,
+            localeFromPath,
+            intlLocaleHeader,
+            rewriteDest: response?.headers.get('x-middleware-rewrite'),
+            cookieName: 'NEXT_LOCALE',
+            cookieValue: request.cookies.get('NEXT_LOCALE')
+          });
+
+          // Prefer header from intl response, fallback to path
+          const locale = intlLocaleHeader || localeFromPath;
+
+          if (locale) {
+            requestHeaders.set('x-next-intl-locale', locale);
+            // Also set X-NEXT-INTL-LOCALE (uppercase) just in case
+            requestHeaders.set('X-NEXT-INTL-LOCALE', locale);
+          }
+
+          // Create fresh response with updated cookies and headers
+          supabaseResponse = response
+            ? NextResponse.rewrite(response.headers.get('x-middleware-rewrite') || request.nextUrl, {
+              request: { headers: requestHeaders }
+            })
+            : NextResponse.next({
+              request: { headers: requestHeaders }
+            });
+
+          // Copy headers from original response
+          if (response) {
+            response.headers.forEach((value, key) => {
+              supabaseResponse.headers.set(key, value);
+            });
+          }
+
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -46,15 +106,19 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  // Strip locale prefix for route matching
+  const pathnameWithoutLocale = stripLocalePrefix(pathname);
+  const locale = getLocaleFromPath(pathname) || 'en';
+
   const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
-    pathname.startsWith(route)
+    pathnameWithoutLocale.startsWith(route)
   );
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathnameWithoutLocale.startsWith(route));
 
   // Redirect unauthenticated users from protected routes
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = '/login';
+    url.pathname = `/${locale}/login`;
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
@@ -63,11 +127,11 @@ export async function updateSession(request: NextRequest) {
   if (
     user &&
     isAuthRoute &&
-    !pathname.startsWith('/auth/callback') &&
-    !pathname.startsWith('/auth/confirm')
+    !pathnameWithoutLocale.startsWith('/auth/callback') &&
+    !pathnameWithoutLocale.startsWith('/auth/confirm')
   ) {
     const url = request.nextUrl.clone();
-    const redirect = url.searchParams.get('redirect') || '/play';
+    const redirect = url.searchParams.get('redirect') || `/${locale}/play`;
     url.pathname = redirect;
     url.searchParams.delete('redirect');
     return NextResponse.redirect(url);

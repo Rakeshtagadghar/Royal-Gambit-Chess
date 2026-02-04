@@ -1,6 +1,7 @@
 'use client';
 
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ interface TrackCardProps {
 }
 
 export function TrackCard({ track, index = 0 }: TrackCardProps) {
+  const t = useTranslations('learn');
   const completionPercentage = Math.round(track.completionPercentage || 0);
   const isStarted = track.completedLessons > 0 || track.inProgressLessons > 0;
   const isCompleted = completionPercentage === 100;
@@ -53,11 +55,11 @@ export function TrackCard({ track, index = 0 }: TrackCardProps) {
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <div className="flex items-center gap-1">
                 <BookOpen className="w-3.5 h-3.5" />
-                <span>{track.totalLessons} lessons</span>
+                <span>{t('nLessons', { count: track.totalLessons })}</span>
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
-                <span>{track.estimatedHours}h</span>
+                <span>{track.estimatedHours}{t('hourUnit')}</span>
               </div>
             </div>
 
@@ -66,8 +68,8 @@ export function TrackCard({ track, index = 0 }: TrackCardProps) {
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">
                   {isStarted
-                    ? `${track.completedLessons}/${track.totalLessons} completed`
-                    : 'Not started'}
+                    ? t('completedProgress', { completed: track.completedLessons, total: track.totalLessons })
+                    : t('notStartedYet')}
                 </span>
                 <span className="font-medium">{completionPercentage}%</span>
               </div>
