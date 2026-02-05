@@ -40,9 +40,9 @@ export const config = {
   matcher: [
     /*
      * Match the root path explicitly (for locale redirect)
-     * and all request paths except static assets
+     * and all request paths except static assets, sitemap.xml, and robots.txt
      */
     '/',
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|wasm|mp3|wav)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap\\.xml|robots\\.txt|.*\\.(?:txt|svg|png|jpg|jpeg|gif|webp|ico|wasm|mp3|wav)$).*)',
   ],
 };
