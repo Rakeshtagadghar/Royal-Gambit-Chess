@@ -18,12 +18,14 @@ export function RouteTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { hasAnalyticsConsent } = useCookieConsent();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
 
   // Track last path to prevent duplicate fires
   const lastPathRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Wait for auth to be initialized before tracking - prevents is_logged_in race condition
+    if (!isInitialized) return;
     if (!hasAnalyticsConsent) return;
     if (!pathname) return;
 
@@ -43,7 +45,7 @@ export function RouteTracker() {
       },
       { isLoggedIn: isAuthenticated }
     );
-  }, [pathname, searchParams, hasAnalyticsConsent, isAuthenticated]);
+  }, [pathname, searchParams, hasAnalyticsConsent, isAuthenticated, isInitialized]);
 
   return null;
 }

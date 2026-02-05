@@ -28,12 +28,16 @@ export function LanguageSwitcher() {
   const handleLocaleChange = (newLocale: SupportedLocale) => {
     if (newLocale === locale) return;
 
+    // Persist locale preference
+    const setCookie = () => {
+      document.cookie = `${LOCALE_COOKIE_NAME}=${newLocale};path=/;max-age=${LOCALE_COOKIE_MAX_AGE};samesite=lax`;
+    };
+    const setStorage = () => {
+      localStorage.setItem('preferred_language', newLocale);
+    };
 
-    // Set cookie for persistence
-    document.cookie = `${LOCALE_COOKIE_NAME}=${newLocale};path=/;max-age=${LOCALE_COOKIE_MAX_AGE};samesite=lax`;
-
-    // Save to localStorage
-    localStorage.setItem('preferred_language', newLocale);
+    setCookie();
+    setStorage();
 
     // Clean pathname to avoid double locales (e.g. /hi/hi/play)
     // next-intl's usePathname should return the path without locale, but just in case

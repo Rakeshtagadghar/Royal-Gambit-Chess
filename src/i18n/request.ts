@@ -18,13 +18,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     locale = cookieStore.get('NEXT_LOCALE')?.value as SupportedLocale;
   }
 
-  // Fallback 3: Check URL from header (last resort parse)
-  if (!locale) {
-    const headersList = await headers();
-    // x-url might be available or Referer
-    const referer = headersList.get('referer');
-    // Try to approximate from referer? No, safer to default.
-  }
+  // Fallback 3: No additional sources available. Will default below.
 
   if (!locale || !routing.locales.includes(locale as SupportedLocale)) {
     locale = routing.defaultLocale;

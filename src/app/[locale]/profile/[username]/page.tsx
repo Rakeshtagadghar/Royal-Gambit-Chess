@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useParams } from 'next/navigation';
-import { useRouter } from '@/i18n/navigation';
+import { useRouter, Link } from '@/i18n/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -206,7 +206,7 @@ export default function ProfilePage() {
 
                 {isOwnProfile && (
                   <Button variant="outline" asChild>
-                    <a href="/settings">Edit Profile</a>
+                    <Link href="/settings">Edit Profile</Link>
                   </Button>
                 )}
               </div>

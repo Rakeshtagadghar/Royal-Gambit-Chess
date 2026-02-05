@@ -148,7 +148,8 @@ const faqKeys = [
 ];
 
 export default async function HowItWorksPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
+  const { locale: _locale } = await params;
+  void _locale; // Required for async params handling
   const t = await getTranslations("howItWorks");
 
   return (

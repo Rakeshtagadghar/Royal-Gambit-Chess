@@ -156,7 +156,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
                 {t.rich("section9Content", {
                   privacyPolicy: (chunks) => (
                     <Link href="/privacy-policy" className="text-primary hover:underline">
-                      {t("privacyPolicyLink")}
+                      {chunks}
                     </Link>
                   )
                 })}

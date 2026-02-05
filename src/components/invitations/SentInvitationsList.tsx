@@ -197,7 +197,7 @@ export function SentInvitationsList() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient, userId]);
+  }, [queryClient, userId, t]);
 
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {

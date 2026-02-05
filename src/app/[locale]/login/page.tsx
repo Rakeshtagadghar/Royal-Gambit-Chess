@@ -27,7 +27,6 @@ function LoginContent() {
   const router = useRouter();
   const { signIn, signUp, signInWithGoogle, isInitialized, isAuthenticated } = useAuth();
   const t = useTranslations('auth');
-  const tCommon = useTranslations('common');
 
   const [activeTab, setActiveTab] = useState(searchParams.get('signup') ? 'signup' : 'signin');
   const [email, setEmail] = useState('');

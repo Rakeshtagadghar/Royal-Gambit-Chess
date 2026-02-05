@@ -176,7 +176,7 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
                   <strong>{t.rich("thirdPartyGA", {
                     cookiePolicy: (chunks) => (
                       <Link href="/cookie-policy" className="text-primary hover:underline">
-                        {t("thirdPartyGALink")}
+                        {chunks}
                       </Link>
                     )
                   })}</strong>
@@ -210,7 +210,7 @@ export default async function PrivacyPolicyPage({ params }: { params: Promise<{ 
                       rel="noopener noreferrer"
                       className="text-primary hover:underline"
                     >
-                      {t("microsoftPrivacyLink")}
+                      {chunks}
                     </a>
                   )
                 })}

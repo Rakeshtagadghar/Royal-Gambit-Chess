@@ -609,10 +609,10 @@ function CustomCursor() {
   const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted] = useState(() => typeof window !== 'undefined');
 
   useEffect(() => {
-    setIsMounted(true);
+    if (!isMounted) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
@@ -641,7 +641,7 @@ function CustomCursor() {
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [isMounted]);
 
   // Don't render on server or mobile
   if (!isMounted) return null;
@@ -726,7 +726,7 @@ function AnimatedGridBackground() {
 
 // Floating particles - generated client-side to avoid hydration mismatch
 function FloatingParticles() {
-  const [particles, setParticles] = useState<Array<{
+  const [particles] = useState<Array<{
     id: number;
     x: number;
     y: number;
@@ -734,11 +734,10 @@ function FloatingParticles() {
     duration: number;
     delay: number;
     xOffset: number;
-  }>>([]);
-
-  useEffect(() => {
+  }>>(() => {
     // Generate particles only on client to avoid hydration issues
-    const generated = Array.from({ length: 20 }, (_, i) => ({
+    if (typeof window === 'undefined') return [];
+    return Array.from({ length: 20 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
@@ -747,8 +746,7 @@ function FloatingParticles() {
       delay: Math.random() * 5,
       xOffset: Math.random() * 40 - 20,
     }));
-    setParticles(generated);
-  }, []);
+  });
 
   if (particles.length === 0) return null;
 
@@ -807,10 +805,10 @@ function MorphingBlob({ className, color }: { className?: string; color: string 
 // Glowing orb with mouse interaction
 function InteractiveGlowOrb() {
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
-  const [isMounted, setIsMounted] = useState(false);
+  const [isMounted] = useState(() => typeof window !== 'undefined');
 
   useEffect(() => {
-    setIsMounted(true);
+    if (!isMounted) return;
     const handleMouseMove = (e: MouseEvent) => {
       setMousePos({
         x: (e.clientX / window.innerWidth) * 100,
@@ -820,7 +818,7 @@ function InteractiveGlowOrb() {
 
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [isMounted]);
 
   if (!isMounted) return null;
 
